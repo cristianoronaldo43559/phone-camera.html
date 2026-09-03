@@ -1,35 +1,162 @@
-<script>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-////////////////////////////////////////////////////
-// GLOBAL VARIABLES
-////////////////////////////////////////////////////
+  <title>Phone Camera → PC</title>
+
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      background: #101218;
+      color: white;
+      font-family: Arial, sans-serif;
+      text-align: center;
+    }
+
+    h1 {
+      margin-bottom: 25px;
+    }
+
+    .box {
+      max-width: 800px;
+      margin: 20px auto;
+      padding: 25px;
+      background: #1b1e26;
+      border-radius: 18px;
+    }
+
+    button,
+    input {
+      padding: 14px 18px;
+      margin: 6px;
+      border: 0;
+      border-radius: 10px;
+      font-size: 17px;
+    }
+
+    button {
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    input {
+      width: 180px;
+      text-align: center;
+      letter-spacing: 4px;
+    }
+
+    video {
+      width: 100%;
+      max-height: 70vh;
+      margin-top: 20px;
+      background: black;
+      border-radius: 15px;
+    }
+
+    #code {
+      font-size: 42px;
+      font-weight: bold;
+      letter-spacing: 8px;
+      margin: 25px;
+    }
+
+    .status {
+      margin: 15px;
+      color: #bbb;
+    }
+
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+
+<body>
+
+  <h1>📱 Phone Camera → 💻 PC</h1>
+
+  <div class="box">
+    <button onclick="showPhone()">📱 PHONE</button>
+    <button onclick="showPC()">💻 COMPUTER</button>
+  </div>
+
+
+  <!-- PHONE -->
+
+  <div id="phoneBox" class="box hidden">
+
+    <h2>📱 Phone</h2>
+
+    <button onclick="startPhone()">
+      Start Camera
+    </button>
+
+    <div id="code">------</div>
+
+    <p>Enter this code on the computer.</p>
+
+    <div id="phoneStatus" class="status">
+      Camera not started.
+    </div>
+
+    <video
+      id="phoneVideo"
+      autoplay
+      muted
+      playsinline>
+    </video>
+
+  </div>
+
+
+  <!-- COMPUTER -->
+
+  <div id="pcBox" class="box hidden">
+
+    <h2>💻 Computer</h2>
+
+    <input
+      id="codeInput"
+      type="text"
+      maxlength="6"
+      inputmode="numeric"
+      placeholder="6-digit code">
+
+    <button onclick="connectPC()">
+      Connect
+    </button>
+
+    <div id="pcStatus" class="status">
+      Enter the phone code.
+    </div>
+
+    <video
+      id="pcVideo"
+      autoplay
+      playsinline>
+    </video>
+
+  </div>
+
+
+<script>
 
 let phonePeer = null;
 let phoneStream = null;
 
 let pcPeer = null;
-let pcConnection = null;
-
-let phoneConnection = null;
 
 
-////////////////////////////////////////////////////
-// PEERJS CONFIG
-////////////////////////////////////////////////////
+/* =========================
+   MODE
+========================= */
 
-const PEER_CONFIG = {
-  host: "0.peerjs.com",
-  port: 443,
-  secure: true,
-  path: "/"
-};
-
-
-////////////////////////////////////////////////////
-// MODE BUTTONS
-////////////////////////////////////////////////////
-
-function phoneMode() {
+function showPhone() {
 
   document.getElementById("phoneBox")
     .classList.remove("hidden");
@@ -39,7 +166,7 @@ function phoneMode() {
 }
 
 
-function pcMode() {
+function showPC() {
 
   document.getElementById("pcBox")
     .classList.remove("hidden");
@@ -49,34 +176,37 @@ function pcMode() {
 }
 
 
-////////////////////////////////////////////////////
-// GENERATE 6 DIGIT CODE
-////////////////////////////////////////////////////
+/* =========================
+   RANDOM 6 DIGIT CODE
+========================= */
 
-function generateCode() {
+function makeCode() {
 
   return String(
-    Math.floor(100000 + Math.random() * 900000)
+    Math.floor(
+      100000 + Math.random() * 900000
+    )
   );
 
 }
 
 
-////////////////////////////////////////////////////
-// PHONE
-////////////////////////////////////////////////////
+/* =========================
+   PHONE
+========================= */
 
 async function startPhone() {
 
+  const status =
+    document.getElementById("phoneStatus");
+
   try {
 
-    document.getElementById("phoneStatus")
-      .textContent = "📷 Opening camera...";
+    status.textContent =
+      "📷 Opening camera...";
 
 
-    //////////////////////////////////////////////////
-    // CAMERA
-    //////////////////////////////////////////////////
+    /* CAMERA */
 
     phoneStream =
       await navigator.mediaDevices.getUserMedia({
@@ -100,25 +230,20 @@ async function startPhone() {
       });
 
 
-    //////////////////////////////////////////////////
-    // SHOW PHONE CAMERA
-    //////////////////////////////////////////////////
+    /* SHOW PHONE CAMERA */
 
     const video =
       document.getElementById("phoneVideo");
 
-    video.srcObject = phoneStream;
+    video.srcObject =
+      phoneStream;
 
     await video.play();
 
 
-    document.getElementById("phoneStatus")
-      .textContent = "🌐 Connecting to PeerJS...";
+    status.textContent =
+      "🌐 Connecting...";
 
-
-    //////////////////////////////////////////////////
-    // CREATE PEER
-    //////////////////////////////////////////////////
 
     createPhonePeer();
 
@@ -128,135 +253,112 @@ async function startPhone() {
 
     console.error(error);
 
-    document.getElementById("phoneStatus")
-      .textContent =
-      "❌ Camera error: " + error.message;
+    status.textContent =
+      "❌ " + error.message;
 
   }
 
 }
 
 
-////////////////////////////////////////////////////
-// CREATE PHONE PEER
-////////////////////////////////////////////////////
+/* =========================
+   CREATE PHONE PEER
+========================= */
 
 function createPhonePeer() {
 
-  const code = generateCode();
+  const status =
+    document.getElementById("phoneStatus");
 
-  console.log("Creating phone Peer:", code);
+
+  const code =
+    makeCode();
+
+
+  console.log(
+    "Phone code:",
+    code
+  );
 
 
   phonePeer =
-    new Peer(code, PEER_CONFIG);
+    new Peer(code, {
+
+      host: "0.peerjs.com",
+
+      port: 443,
+
+      secure: true,
+
+      path: "/"
+
+    });
 
 
-  //////////////////////////////////////////////////
-  // PEER OPEN
-  //////////////////////////////////////////////////
+  /* PEER READY */
 
   phonePeer.on("open", function(id) {
 
-    console.log("PHONE PEER READY:", id);
+    console.log(
+      "PHONE READY:",
+      id
+    );
+
 
     document.getElementById("code")
       .textContent = id;
 
-    document.getElementById("phoneStatus")
-      .textContent =
-      "🟢 Ready! Enter this code on PC.";
+
+    status.textContent =
+      "🟢 Ready! Waiting for PC...";
 
   });
 
 
-  //////////////////////////////////////////////////
-  // COMPUTER CONNECTS
-  //////////////////////////////////////////////////
+  /* PC CALLS PHONE */
 
-  phonePeer.on("connection", function(connection) {
+  phonePeer.on("call", function(call) {
 
-    console.log("💻 Computer connection received");
-
-    phoneConnection = connection;
+    console.log(
+      "📞 PC called phone"
+    );
 
 
-    document.getElementById("phoneStatus")
-      .textContent =
-      "🟡 Computer found! Connecting...";
+    status.textContent =
+      "🟡 PC connected! Sending camera...";
 
 
-    //////////////////////////////////////////////////
-    // IMPORTANT:
-    // LISTEN FOR DATA BEFORE STARTING WEBRTC
-    //////////////////////////////////////////////////
+    /* ANSWER WITH CAMERA */
 
-    connection.on("data", async function(message) {
-
-      console.log(
-        "📡 PHONE RECEIVED:",
-        message.type
-      );
+    call.answer(phoneStream);
 
 
-      if (message.type === "ANSWER") {
+    /* OPTIONAL EVENTS */
 
-        console.log("✅ PC ANSWER RECEIVED");
+    call.on("close", function() {
 
-        await phoneRTC.setRemoteDescription(
-          new RTCSessionDescription(message.sdp)
-        );
-
-        document.getElementById("phoneStatus")
-          .textContent =
-          "🟢 LIVE! Camera is being sent to PC.";
-
-      }
+      status.textContent =
+        "🔴 PC disconnected.";
 
     });
 
 
-    //////////////////////////////////////////////////
-    // CONNECTION OPEN
-    //////////////////////////////////////////////////
-
-    connection.on("open", function() {
-
-      console.log("🟢 DATA CONNECTION OPEN");
-
-      document.getElementById("phoneStatus")
-        .textContent =
-        "🟡 Starting video connection...";
-
-
-      startPhoneWebRTC(connection);
-
-    });
-
-
-    //////////////////////////////////////////////////
-    // CONNECTION ERROR
-    //////////////////////////////////////////////////
-
-    connection.on("error", function(error) {
+    call.on("error", function(error) {
 
       console.error(
-        "Phone data connection error:",
+        "Call error:",
         error
       );
 
-      document.getElementById("phoneStatus")
-        .textContent =
-        "❌ Data connection error.";
+      status.textContent =
+        "❌ Video error.";
 
     });
 
   });
 
 
-  //////////////////////////////////////////////////
-  // PEER ERROR
-  //////////////////////////////////////////////////
+  /* ERROR */
 
   phonePeer.on("error", function(error) {
 
@@ -268,197 +370,47 @@ function createPhonePeer() {
 
     if (error.type === "unavailable-id") {
 
-      console.log("Code collision. Generating new code...");
+      status.textContent =
+        "🔄 Code collision. Creating new code...";
+
 
       phonePeer.destroy();
 
-      createPhonePeer();
+      setTimeout(
+        createPhonePeer,
+        500
+      );
 
       return;
 
     }
 
 
-    document.getElementById("phoneStatus")
-      .textContent =
-      "❌ PeerJS: " + error.type;
+    status.textContent =
+      "❌ " + error.type;
 
   });
 
-
-  //////////////////////////////////////////////////
-  // DISCONNECTED
-  //////////////////////////////////////////////////
 
   phonePeer.on("disconnected", function() {
 
-    console.log("Phone PeerJS disconnected");
-
-    document.getElementById("phoneStatus")
-      .textContent =
-      "🔴 PeerJS disconnected.";
+    status.textContent =
+      "🔴 Connection server disconnected.";
 
   });
 
 }
 
 
-////////////////////////////////////////////////////
-// PHONE WEBRTC
-////////////////////////////////////////////////////
+/* =========================
+   COMPUTER
+========================= */
 
-let phoneRTC = null;
+function connectPC() {
 
+  const status =
+    document.getElementById("pcStatus");
 
-async function startPhoneWebRTC(connection) {
-
-  console.log("📹 Creating phone WebRTC");
-
-
-  //////////////////////////////////////////////////
-  // CREATE RTC
-  //////////////////////////////////////////////////
-
-  phoneRTC =
-    new RTCPeerConnection({
-
-      iceServers: [
-
-        {
-          urls:
-            "stun:stun.l.google.com:19302"
-        }
-
-      ]
-
-    });
-
-
-  //////////////////////////////////////////////////
-  // ADD CAMERA TRACKS
-  //////////////////////////////////////////////////
-
-  phoneStream
-    .getTracks()
-    .forEach(function(track) {
-
-      phoneRTC.addTrack(
-        track,
-        phoneStream
-      );
-
-    });
-
-
-  //////////////////////////////////////////////////
-  // RTC STATUS
-  //////////////////////////////////////////////////
-
-  phoneRTC.onconnectionstatechange =
-    function() {
-
-      console.log(
-        "PHONE RTC:",
-        phoneRTC.connectionState
-      );
-
-    };
-
-
-  //////////////////////////////////////////////////
-  // CREATE OFFER
-  //////////////////////////////////////////////////
-
-  const offer =
-    await phoneRTC.createOffer();
-
-
-  await phoneRTC.setLocalDescription(
-    offer
-  );
-
-
-  //////////////////////////////////////////////////
-  // WAIT FOR ICE
-  //////////////////////////////////////////////////
-
-  await waitForICE(phoneRTC);
-
-
-  //////////////////////////////////////////////////
-  // SEND OFFER
-  //////////////////////////////////////////////////
-
-  console.log("📡 Sending OFFER");
-
-  connection.send({
-
-    type: "OFFER",
-
-    sdp: phoneRTC.localDescription
-
-  });
-
-
-  document.getElementById("phoneStatus")
-    .textContent =
-    "🟡 Waiting for PC...";
-
-}
-
-
-////////////////////////////////////////////////////
-// WAIT FOR ICE
-////////////////////////////////////////////////////
-
-function waitForICE(rtc) {
-
-  return new Promise(function(resolve) {
-
-    if (
-      rtc.iceGatheringState === "complete"
-    ) {
-
-      resolve();
-
-      return;
-
-    }
-
-
-    function checkICE() {
-
-      if (
-        rtc.iceGatheringState === "complete"
-      ) {
-
-        rtc.removeEventListener(
-          "icegatheringstatechange",
-          checkICE
-        );
-
-        resolve();
-
-      }
-
-    }
-
-
-    rtc.addEventListener(
-      "icegatheringstatechange",
-      checkICE
-    );
-
-  });
-
-}
-
-
-////////////////////////////////////////////////////
-// COMPUTER
-////////////////////////////////////////////////////
-
-function connectToPhone() {
 
   const code =
     document.getElementById("codeInput")
@@ -466,14 +418,11 @@ function connectToPhone() {
       .trim();
 
 
-  //////////////////////////////////////////////////
-  // CHECK CODE
-  //////////////////////////////////////////////////
+  /* CHECK CODE */
 
   if (!/^\d{6}$/.test(code)) {
 
-    document.getElementById("pcStatus")
-      .textContent =
+    status.textContent =
       "⚠️ Enter exactly 6 digits.";
 
     return;
@@ -481,146 +430,150 @@ function connectToPhone() {
   }
 
 
-  document.getElementById("pcStatus")
-    .textContent =
-    "🌐 Connecting to PeerJS...";
+  status.textContent =
+    "🌐 Connecting to phone...";
 
 
-  //////////////////////////////////////////////////
-  // DESTROY OLD PEER
-  //////////////////////////////////////////////////
+  /* DESTROY OLD PEER */
 
   if (pcPeer) {
 
-    try {
-      pcPeer.destroy();
-    } catch (e) {}
+    pcPeer.destroy();
 
   }
 
 
-  //////////////////////////////////////////////////
-  // CREATE PC PEER
-  //////////////////////////////////////////////////
+  /* CREATE PC PEER */
 
   pcPeer =
-    new Peer(undefined, PEER_CONFIG);
+    new Peer(undefined, {
+
+      host: "0.peerjs.com",
+
+      port: 443,
+
+      secure: true,
+
+      path: "/"
+
+    });
 
 
-  //////////////////////////////////////////////////
-  // PC PEER READY
-  //////////////////////////////////////////////////
+  /* PC READY */
 
-  pcPeer.on("open", function(myId) {
+  pcPeer.on("open", function(id) {
 
     console.log(
-      "💻 PC PEER READY:",
-      myId
+      "PC READY:",
+      id
     );
 
 
-    document.getElementById("pcStatus")
-      .textContent =
-      "🌐 Finding phone...";
+    status.textContent =
+      "📞 Calling phone...";
 
 
-    //////////////////////////////////////////////////
-    // CONNECT TO PHONE
-    //////////////////////////////////////////////////
+    /*
+      IMPORTANT:
 
-    pcConnection =
-      pcPeer.connect(code, {
+      We need a MediaStream because
+      PeerJS call() expects one.
 
-        reliable: true
+      We don't want to send PC camera,
+      so create an empty stream.
+    */
 
-      });
+    const emptyStream =
+      new MediaStream();
 
 
-    //////////////////////////////////////////////////
-    // CONNECTION OPEN
-    //////////////////////////////////////////////////
+    /* CALL PHONE */
 
-    pcConnection.on("open", function() {
-
-      console.log(
-        "🟢 PC CONNECTED TO PHONE"
+    const call =
+      pcPeer.call(
+        code,
+        emptyStream
       );
 
 
-      document.getElementById("pcStatus")
-        .textContent =
-        "🟢 Phone found! Waiting for video...";
+    if (!call) {
+
+      status.textContent =
+        "❌ Could not create call.";
+
+      return;
+
+    }
+
+
+    status.textContent =
+      "🟡 Waiting for phone video...";
+
+
+    /* RECEIVE PHONE CAMERA */
+
+    call.on("stream", function(stream) {
+
+      console.log(
+        "🔥 PHONE VIDEO RECEIVED"
+      );
+
+
+      const video =
+        document.getElementById("pcVideo");
+
+
+      video.srcObject =
+        stream;
+
+
+      video.play()
+        .then(function() {
+
+          status.textContent =
+            "🟢 LIVE! Phone camera connected.";
+
+        })
+        .catch(function(error) {
+
+          console.error(
+            "Video play error:",
+            error
+          );
+
+        });
 
     });
 
 
-    //////////////////////////////////////////////////
-    // RECEIVE OFFER
-    //////////////////////////////////////////////////
+    /* CALL CLOSED */
 
-    pcConnection.on("data", async function(message) {
+    call.on("close", function() {
 
-      console.log(
-        "📡 PC RECEIVED:",
-        message.type
-      );
-
-
-      if (message.type === "OFFER") {
-
-        document.getElementById("pcStatus")
-          .textContent =
-          "📡 Phone camera found! Starting video...";
-
-
-        await receivePhoneOffer(
-          pcConnection,
-          message.sdp
-        );
-
-      }
+      status.textContent =
+        "🔴 Phone disconnected.";
 
     });
 
 
-    //////////////////////////////////////////////////
-    // DATA ERROR
-    //////////////////////////////////////////////////
+    /* CALL ERROR */
 
-    pcConnection.on("error", function(error) {
+    call.on("error", function(error) {
 
       console.error(
-        "PC DATA ERROR:",
+        "CALL ERROR:",
         error
       );
 
-      document.getElementById("pcStatus")
-        .textContent =
-        "❌ Connection error.";
-
-    });
-
-
-    //////////////////////////////////////////////////
-    // CLOSE
-    //////////////////////////////////////////////////
-
-    pcConnection.on("close", function() {
-
-      console.log("Connection closed");
-
-      document.getElementById("pcStatus")
-        .textContent =
-        "🔴 Phone disconnected.";
+      status.textContent =
+        "❌ Video connection failed.";
 
     });
 
   });
 
 
-  //////////////////////////////////////////////////
-  // PEER ERROR
-  //////////////////////////////////////////////////
+  /* PHONE NOT FOUND */
 
   pcPeer.on("error", function(error) {
 
@@ -632,223 +585,59 @@ function connectToPhone() {
 
     if (error.type === "peer-unavailable") {
 
-      document.getElementById("pcStatus")
-        .textContent =
-        "❌ Phone code not found.";
+      status.textContent =
+        "❌ Phone not found. Check the code.";
 
     }
 
     else {
 
-      document.getElementById("pcStatus")
-        .textContent =
-        "❌ PeerJS: " + error.type;
+      status.textContent =
+        "❌ " + error.type;
 
     }
-
-  });
-
-
-  //////////////////////////////////////////////////
-  // DISCONNECTED
-  //////////////////////////////////////////////////
-
-  pcPeer.on("disconnected", function() {
-
-    console.log("PC PeerJS disconnected");
-
-    document.getElementById("pcStatus")
-      .textContent =
-      "🔴 PeerJS disconnected.";
 
   });
 
 }
 
 
-////////////////////////////////////////////////////
-// RECEIVE PHONE OFFER
-////////////////////////////////////////////////////
+/* =========================
+   CLEAN UP
+========================= */
 
-async function receivePhoneOffer(
-  connection,
-  offer
-) {
+window.addEventListener(
+  "beforeunload",
+  function() {
 
-  console.log(
-    "📡 PHONE OFFER RECEIVED"
-  );
+    if (phoneStream) {
 
+      phoneStream
+        .getTracks()
+        .forEach(function(track) {
 
-  //////////////////////////////////////////////////
-  // CREATE RTC
-  //////////////////////////////////////////////////
-
-  const rtc =
-    new RTCPeerConnection({
-
-      iceServers: [
-
-        {
-          urls:
-            "stun:stun.l.google.com:19302"
-        }
-
-      ]
-
-    });
-
-
-  //////////////////////////////////////////////////
-  // RECEIVE VIDEO ONLY
-  //////////////////////////////////////////////////
-
-  rtc.addTransceiver(
-    "video",
-    {
-      direction: "recvonly"
-    }
-  );
-
-
-  //////////////////////////////////////////////////
-  // VIDEO ARRIVES
-  //////////////////////////////////////////////////
-
-  rtc.ontrack =
-    function(event) {
-
-      console.log(
-        "🔥 VIDEO TRACK RECEIVED!"
-      );
-
-
-      const video =
-        document.getElementById("pcVideo");
-
-
-      if (
-        event.streams &&
-        event.streams[0]
-      ) {
-
-        video.srcObject =
-          event.streams[0];
-
-      }
-
-      else {
-
-        const stream =
-          new MediaStream();
-
-        stream.addTrack(
-          event.track
-        );
-
-        video.srcObject =
-          stream;
-
-      }
-
-
-      video.play()
-        .then(function() {
-
-          document.getElementById("pcStatus")
-            .textContent =
-            "🟢 LIVE! Phone camera connected.";
-
-        })
-        .catch(function(error) {
-
-          console.error(
-            "VIDEO PLAY ERROR:",
-            error
-          );
+          track.stop();
 
         });
 
-    };
+    }
 
+    if (phonePeer) {
 
-  //////////////////////////////////////////////////
-  // RTC STATES
-  //////////////////////////////////////////////////
+      phonePeer.destroy();
 
-  rtc.onconnectionstatechange =
-    function() {
+    }
 
-      console.log(
-        "💻 PC RTC:",
-        rtc.connectionState
-      );
+    if (pcPeer) {
 
-    };
+      pcPeer.destroy();
 
+    }
 
-  rtc.oniceconnectionstatechange =
-    function() {
-
-      console.log(
-        "💻 ICE:",
-        rtc.iceConnectionState
-      );
-
-    };
-
-
-  //////////////////////////////////////////////////
-  // SET OFFER
-  //////////////////////////////////////////////////
-
-  await rtc.setRemoteDescription(
-    new RTCSessionDescription(offer)
-  );
-
-
-  //////////////////////////////////////////////////
-  // CREATE ANSWER
-  //////////////////////////////////////////////////
-
-  const answer =
-    await rtc.createAnswer();
-
-
-  await rtc.setLocalDescription(
-    answer
-  );
-
-
-  //////////////////////////////////////////////////
-  // WAIT FOR ICE
-  //////////////////////////////////////////////////
-
-  await waitForICE(rtc);
-
-
-  //////////////////////////////////////////////////
-  // SEND ANSWER
-  //////////////////////////////////////////////////
-
-  console.log(
-    "📡 Sending ANSWER"
-  );
-
-
-  connection.send({
-
-    type: "ANSWER",
-
-    sdp: rtc.localDescription
-
-  });
-
-
-  document.getElementById("pcStatus")
-    .textContent =
-    "🟡 WebRTC connecting...";
-
-}
+  }
+);
 
 </script>
+
+</body>
+</html>

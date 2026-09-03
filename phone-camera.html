@@ -1,501 +1,473 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Phone Webcam</title>
+  <title>Phone Camera → PC</title>
 
-<style>
-* {
-    box-sizing: border-box;
-}
+  <!-- PeerJS -->
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 
-body {
-    margin: 0;
-    min-height: 100vh;
-    background: #111;
-    color: white;
-    font-family: Arial, sans-serif;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
+  <style>
+    * {
+      box-sizing: border-box;
+    }
 
-.container {
-    width: 95%;
-    max-width: 850px;
-    text-align: center;
-}
+    body {
+      margin: 0;
+      padding: 25px;
+      background: #101114;
+      color: white;
+      font-family: Arial, sans-serif;
+      text-align: center;
+    }
 
-h1 {
-    margin-bottom: 20px;
-}
+    h1 {
+      margin-bottom: 10px;
+    }
 
-.mode-buttons button,
-.action-buttons button {
-    padding: 13px 20px;
-    margin: 6px;
-    border: 0;
-    border-radius: 9px;
-    cursor: pointer;
-    font-size: 15px;
-}
+    .box {
+      max-width: 700px;
+      margin: 20px auto;
+      padding: 20px;
+      background: #191b21;
+      border-radius: 18px;
+    }
 
-.phone {
-    background: #00c853;
-    color: white;
-}
+    button,
+    input {
+      font-size: 18px;
+      padding: 12px 16px;
+      margin: 6px;
+      border: none;
+      border-radius: 10px;
+    }
 
-.computer {
-    background: #2979ff;
-    color: white;
-}
+    button {
+      cursor: pointer;
+    }
 
-.stop {
-    background: #d50000;
-    color: white;
-}
+    input {
+      width: 190px;
+      text-align: center;
+    }
 
-textarea {
-    width: 100%;
-    min-height: 120px;
-    margin-top: 10px;
-    padding: 10px;
-    border-radius: 8px;
-    border: 0;
-    resize: vertical;
-}
+    video {
+      width: 100%;
+      max-height: 65vh;
+      background: black;
+      border-radius: 14px;
+      margin-top: 15px;
+    }
 
-video {
-    width: 100%;
-    max-height: 65vh;
-    margin-top: 20px;
-    background: black;
-    border-radius: 15px;
-}
+    #code {
+      font-size: 40px;
+      font-weight: bold;
+      letter-spacing: 7px;
+      margin: 20px;
+    }
 
-.status {
-    margin: 15px;
-    color: #aaa;
-}
+    .hidden {
+      display: none;
+    }
 
-.hidden {
-    display: none;
-}
-
-.panel {
-    background: #1d1d1d;
-    padding: 20px;
-    border-radius: 15px;
-    margin-top: 20px;
-}
-
-.copy {
-    background: #555;
-    color: white;
-}
-</style>
+    .status {
+      margin: 15px;
+      color: #aaa;
+    }
+  </style>
 </head>
 
 <body>
 
-<div class="container">
+  <h1>📱 Phone Camera → 💻 PC</h1>
 
-<h1>📱 Phone Webcam</h1>
-
-<div class="mode-buttons">
-    <button class="phone" onclick="phoneMode()">
-        📱 PHONE
-    </button>
-
-    <button class="computer" onclick="computerMode()">
-        💻 COMPUTER
-    </button>
-</div>
-
-<div class="status" id="status">
-    Choose a mode
-</div>
+  <!-- MODE BUTTONS -->
+  <div class="box">
+    <button onclick="showPhone()">📱 Phone</button>
+    <button onclick="showPC()">💻 Computer</button>
+  </div>
 
 
-<!-- PHONE -->
+  <!-- ================= PHONE ================= -->
 
-<div id="phonePanel" class="panel hidden">
+  <div id="phone" class="box hidden">
 
     <h2>📱 Phone Camera</h2>
 
-    <button class="phone" onclick="startCamera()">
-        📷 Start Camera
+    <button onclick="startPhone()">
+      Start Camera
     </button>
 
-    <button class="stop" onclick="stopCamera()">
-        ⛔ Stop Camera
-    </button>
+    <div id="code">
+      ------
+    </div>
 
-    <button class="computer" onclick="createOffer()">
-        🔗 Create Connection
-    </button>
+    <p>
+      Enter this 6-digit code on the computer.
+    </p>
 
-    <h3>Send this code to your computer:</h3>
+    <div id="phoneStatus" class="status">
+      Waiting...
+    </div>
 
-    <textarea id="offerBox" readonly></textarea>
-
-    <button class="copy" onclick="copyOffer()">
-        📋 Copy Code
-    </button>
-
-    <h3>Paste computer's answer here:</h3>
-
-    <textarea id="answerBox"
-        placeholder="Paste answer here"></textarea>
-
-    <button class="phone" onclick="acceptAnswer()">
-        ✅ Connect
-    </button>
-
-    <video id="phoneVideo"
-        autoplay
-        playsinline
-        muted>
+    <video
+      id="localVideo"
+      autoplay
+      playsinline
+      muted>
     </video>
 
-</div>
+  </div>
 
 
-<!-- COMPUTER -->
+  <!-- ================= COMPUTER ================= -->
 
-<div id="computerPanel" class="panel hidden">
+  <div id="pc" class="box hidden">
 
     <h2>💻 Computer Viewer</h2>
 
-    <h3>Paste phone's code here:</h3>
+    <input
+      id="codeInput"
+      type="text"
+      inputmode="numeric"
+      maxlength="6"
+      placeholder="6-digit code">
 
-    <textarea id="computerOffer"
-        placeholder="Paste phone code here"></textarea>
-
-    <button class="computer" onclick="createAnswer()">
-        🔗 Connect to Phone
+    <button onclick="connectPC()">
+      Connect
     </button>
 
-    <h3>Send this answer back to the phone:</h3>
+    <div id="pcStatus" class="status">
+      Enter the phone code.
+    </div>
 
-    <textarea id="computerAnswer" readonly></textarea>
-
-    <button class="copy" onclick="copyAnswer()">
-        📋 Copy Answer
-    </button>
-
-    <video id="remoteVideo"
-        autoplay
-        playsinline>
+    <video
+      id="remoteVideo"
+      autoplay
+      playsinline>
     </video>
 
-</div>
-
-</div>
+  </div>
 
 
-<script>
+  <script>
 
-let stream = null;
-
-let phonePC = null;
-
-let computerPC = null;
+    let peer = null;
+    let stream = null;
 
 
-/* =========================
-   PHONE MODE
-========================= */
+    // =========================
+    // SWITCH TO PHONE MODE
+    // =========================
 
-function phoneMode() {
+    function showPhone() {
 
-    document
-        .getElementById("phonePanel")
-        .classList.remove("hidden");
+      document
+        .getElementById("phone")
+        .classList
+        .remove("hidden");
 
-    document
-        .getElementById("computerPanel")
-        .classList.add("hidden");
-
-    document.getElementById("status").textContent =
-        "📱 Phone mode";
-
-}
+      document
+        .getElementById("pc")
+        .classList
+        .add("hidden");
+    }
 
 
-/* =========================
-   COMPUTER MODE
-========================= */
+    // =========================
+    // SWITCH TO PC MODE
+    // =========================
 
-function computerMode() {
+    function showPC() {
 
-    document
-        .getElementById("computerPanel")
-        .classList.remove("hidden");
+      document
+        .getElementById("pc")
+        .classList
+        .remove("hidden");
 
-    document
-        .getElementById("phonePanel")
-        .classList.add("hidden");
-
-    document.getElementById("status").textContent =
-        "💻 Computer mode";
-
-}
+      document
+        .getElementById("phone")
+        .classList
+        .add("hidden");
+    }
 
 
-/* =========================
-   START CAMERA
-========================= */
+    // =========================
+    // GENERATE 6 DIGIT CODE
+    // =========================
 
-async function startCamera() {
+    function randomCode() {
 
-    try {
+      return String(
+        Math.floor(
+          100000 + Math.random() * 900000
+        )
+      );
 
+    }
+
+
+    // =========================
+    // START PHONE CAMERA
+    // =========================
+
+    async function startPhone() {
+
+      try {
+
+        // Open phone camera
         stream =
-            await navigator.mediaDevices.getUserMedia({
+          await navigator.mediaDevices.getUserMedia({
 
-                video: {
-                    facingMode: "environment"
-                },
+            video: {
+              facingMode: {
+                ideal: "environment"
+              }
+            },
 
-                audio: false
+            audio: false
 
-            });
-
-        document.getElementById("phoneVideo").srcObject =
-            stream;
-
-        document.getElementById("status").textContent =
-            "🟢 Camera running";
-
-    } catch (error) {
-
-        console.error(error);
-
-        document.getElementById("status").textContent =
-            "❌ Camera permission failed";
-
-    }
-
-}
+          });
 
 
-/* =========================
-   STOP CAMERA
-========================= */
-
-function stopCamera() {
-
-    if (!stream) return;
-
-    stream.getTracks().forEach(track => {
-        track.stop();
-    });
-
-    stream = null;
-
-    document.getElementById("phoneVideo").srcObject =
-        null;
-
-    document.getElementById("status").textContent =
-        "🔴 Camera stopped";
-
-}
+        // Show camera on phone
+        document
+          .getElementById("localVideo")
+          .srcObject = stream;
 
 
-/* =========================
-   PHONE CREATE OFFER
-========================= */
+        document
+          .getElementById("phoneStatus")
+          .textContent =
+          "Creating your code...";
 
-async function createOffer() {
 
-    if (!stream) {
+        createPhonePeer();
 
-        alert("Start the camera first.");
+      }
 
-        return;
+      catch (error) {
+
+        document
+          .getElementById("phoneStatus")
+          .textContent =
+          "Camera error: " + error.message;
+
+      }
 
     }
 
-    phonePC = new RTCPeerConnection({
 
-        iceServers: [
-            {
-                urls: "stun:stun.l.google.com:19302"
-            }
-        ]
+    // =========================
+    // CREATE PHONE CONNECTION
+    // =========================
 
-    });
+    function createPhonePeer() {
 
-
-    stream.getTracks().forEach(track => {
-
-        phonePC.addTrack(track, stream);
-
-    });
+      const code = randomCode();
 
 
-    phonePC.onicecandidate = event => {
+      // Create PeerJS connection
+      peer = new Peer(code);
 
-        if (!event.candidate) {
 
-            document.getElementById("offerBox").value =
-                JSON.stringify(
-                    phonePC.localDescription
-                );
+      // Peer successfully connected
+      peer.on("open", function(id) {
+
+        document
+          .getElementById("code")
+          .textContent = id;
+
+
+        document
+          .getElementById("phoneStatus")
+          .textContent =
+          "🟢 Waiting for computer...";
+
+      });
+
+
+      // Computer calls phone
+      peer.on("call", function(call) {
+
+        // Send phone camera to computer
+        call.answer(stream);
+
+
+        call.on("close", function() {
+
+          document
+            .getElementById("phoneStatus")
+            .textContent =
+            "Connection closed.";
+
+        });
+
+
+        document
+          .getElementById("phoneStatus")
+          .textContent =
+          "🟢 Computer connected!";
+
+      });
+
+
+      // Handle errors
+      peer.on("error", function(error) {
+
+        console.log(error);
+
+
+        // If code already exists,
+        // generate another one.
+        if (error.type === "unavailable-id") {
+
+          peer.destroy();
+
+          createPhonePeer();
 
         }
 
-    };
+        else {
 
+          document
+            .getElementById("phoneStatus")
+            .textContent =
+            "Connection error: " + error.type;
 
-    const offer =
-        await phonePC.createOffer();
+        }
 
-    await phonePC.setLocalDescription(offer);
-
-}
-
-
-/* =========================
-   PHONE ACCEPT ANSWER
-========================= */
-
-async function acceptAnswer() {
-
-    try {
-
-        const answer =
-            JSON.parse(
-                document.getElementById("answerBox").value
-            );
-
-        await phonePC.setRemoteDescription(answer);
-
-        document.getElementById("status").textContent =
-            "🟢 Connection established";
-
-    } catch (error) {
-
-        console.error(error);
-
-        alert("Invalid answer code.");
+      });
 
     }
 
-}
+
+    // =========================
+    // CONNECT COMPUTER
+    // =========================
+
+    function connectPC() {
+
+      const code =
+        document
+          .getElementById("codeInput")
+          .value
+          .trim();
 
 
-/* =========================
-   COMPUTER CREATE ANSWER
-========================= */
+      // Check code
+      if (!/^\d{6}$/.test(code)) {
 
-async function createAnswer() {
+        document
+          .getElementById("pcStatus")
+          .textContent =
+          "⚠️ Enter exactly 6 digits.";
 
-    try {
+        return;
 
-        const offer =
-            JSON.parse(
-                document.getElementById("computerOffer").value
-            );
-
-
-        computerPC =
-            new RTCPeerConnection({
-
-                iceServers: [
-                    {
-                        urls:
-                        "stun:stun.l.google.com:19302"
-                    }
-                ]
-
-            });
+      }
 
 
-        computerPC.ontrack = event => {
-
-            document.getElementById("remoteVideo")
-                .srcObject =
-                event.streams[0];
-
-            document.getElementById("status").textContent =
-                "🟢 LIVE PHONE CAMERA";
-
-        };
+      document
+        .getElementById("pcStatus")
+        .textContent =
+        "Connecting...";
 
 
-        computerPC.onicecandidate = event => {
+      // Destroy old connection
+      if (peer) {
 
-            if (!event.candidate) {
+        peer.destroy();
 
-                document.getElementById("computerAnswer")
-                    .value =
-                    JSON.stringify(
-                        computerPC.localDescription
-                    );
-
-            }
-
-        };
+      }
 
 
-        await computerPC.setRemoteDescription(
-            offer
-        );
+      // Create computer Peer
+      peer = new Peer();
 
 
-        const answer =
-            await computerPC.createAnswer();
+      peer.on("open", function() {
+
+        /*
+          PeerJS normally expects the caller
+          to provide a MediaStream.
+
+          We don't want to use the PC camera,
+          so create a tiny dummy stream.
+        */
+
+        const canvas =
+          document.createElement("canvas");
+
+        canvas.width = 2;
+        canvas.height = 2;
 
 
-        await computerPC.setLocalDescription(
-            answer
-        );
+        const dummyStream =
+          canvas.captureStream(1);
 
 
-    } catch (error) {
+        // Call the phone
+        const call =
+          peer.call(code, dummyStream);
 
-        console.error(error);
 
-        alert("Invalid phone code.");
+        // Receive phone camera
+        call.on("stream", function(remoteStream) {
+
+          document
+            .getElementById("remoteVideo")
+            .srcObject = remoteStream;
+
+
+          document
+            .getElementById("pcStatus")
+            .textContent =
+            "🟢 Connected! Live phone camera.";
+
+        });
+
+
+        call.on("close", function() {
+
+          document
+            .getElementById("pcStatus")
+            .textContent =
+            "Connection closed.";
+
+        });
+
+
+        call.on("error", function(error) {
+
+          document
+            .getElementById("pcStatus")
+            .textContent =
+            "Call error: " + error.message;
+
+        });
+
+      });
+
+
+      // Computer connection error
+      peer.on("error", function(error) {
+
+        console.log(error);
+
+
+        document
+          .getElementById("pcStatus")
+          .textContent =
+          "❌ Error: " + error.type;
+
+      });
 
     }
 
-}
-
-
-/* =========================
-   COPY FUNCTIONS
-========================= */
-
-async function copyOffer() {
-
-    const text =
-        document.getElementById("offerBox").value;
-
-    await navigator.clipboard.writeText(text);
-
-    alert("Phone code copied!");
-
-}
-
-
-async function copyAnswer() {
-
-    const text =
-        document.getElementById("computerAnswer").value;
-
-    await navigator.clipboard.writeText(text);
-
-    alert("Answer copied!");
-
-}
-
-</script>
+  </script>
 
 </body>
 </html>

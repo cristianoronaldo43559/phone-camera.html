@@ -3,10 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
   <title>Phone Camera → PC</title>
 
-  <!-- PeerJS -->
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 
   <style>
@@ -83,14 +81,13 @@
 
   <h1>📱 Phone Camera → 💻 PC</h1>
 
-  <!-- MODE BUTTONS -->
   <div class="box">
     <button onclick="showPhone()">📱 Phone</button>
     <button onclick="showPC()">💻 Computer</button>
   </div>
 
 
-  <!-- ================= PHONE ================= -->
+  <!-- PHONE -->
 
   <div id="phone" class="box hidden">
 
@@ -100,13 +97,9 @@
       Start Camera
     </button>
 
-    <div id="code">
-      ------
-    </div>
+    <div id="code">------</div>
 
-    <p>
-      Enter this 6-digit code on the computer.
-    </p>
+    <p>Enter this code on the computer.</p>
 
     <div id="phoneStatus" class="status">
       Waiting...
@@ -122,7 +115,7 @@
   </div>
 
 
-  <!-- ================= COMPUTER ================= -->
+  <!-- COMPUTER -->
 
   <div id="pc" class="box hidden">
 
@@ -154,51 +147,45 @@
 
   <script>
 
-    let peer = null;
-    let stream = null;
+    let phonePeer = null;
+    let phoneStream = null;
+
+    let pcPeer = null;
 
 
     // =========================
-    // SWITCH TO PHONE MODE
+    // PHONE MODE
     // =========================
 
     function showPhone() {
 
-      document
-        .getElementById("phone")
-        .classList
-        .remove("hidden");
+      document.getElementById("phone")
+        .classList.remove("hidden");
 
-      document
-        .getElementById("pc")
-        .classList
-        .add("hidden");
+      document.getElementById("pc")
+        .classList.add("hidden");
     }
 
 
     // =========================
-    // SWITCH TO PC MODE
+    // PC MODE
     // =========================
 
     function showPC() {
 
-      document
-        .getElementById("pc")
-        .classList
-        .remove("hidden");
+      document.getElementById("pc")
+        .classList.remove("hidden");
 
-      document
-        .getElementById("phone")
-        .classList
-        .add("hidden");
+      document.getElementById("phone")
+        .classList.add("hidden");
     }
 
 
     // =========================
-    // GENERATE 6 DIGIT CODE
+    // RANDOM 6 DIGIT CODE
     // =========================
 
-    function randomCode() {
+    function generateCode() {
 
       return String(
         Math.floor(
@@ -217,8 +204,11 @@
 
       try {
 
-        // Open phone camera
-        stream =
+        document.getElementById("phoneStatus")
+          .textContent = "Opening camera...";
+
+
+        phoneStream =
           await navigator.mediaDevices.getUserMedia({
 
             video: {
@@ -233,15 +223,17 @@
 
 
         // Show camera on phone
-        document
-          .getElementById("localVideo")
-          .srcObject = stream;
+
+        const video =
+          document.getElementById("localVideo");
+
+        video.srcObject = phoneStream;
+
+        await video.play();
 
 
-        document
-          .getElementById("phoneStatus")
-          .textContent =
-          "Creating your code...";
+        document.getElementById("phoneStatus")
+          .textContent = "Creating connection...";
 
 
         createPhonePeer();
@@ -250,10 +242,11 @@
 
       catch (error) {
 
-        document
-          .getElementById("phoneStatus")
+        console.error(error);
+
+        document.getElementById("phoneStatus")
           .textContent =
-          "Camera error: " + error.message;
+          "❌ Camera error: " + error.message;
 
       }
 
@@ -261,81 +254,79 @@
 
 
     // =========================
-    // CREATE PHONE CONNECTION
+    // CREATE PHONE PEER
     // =========================
 
     function createPhonePeer() {
 
-      const code = randomCode();
+      const code = generateCode();
 
 
-      // Create PeerJS connection
-      peer = new Peer(code);
+      phonePeer = new Peer(code);
 
 
-      // Peer successfully connected
-      peer.on("open", function(id) {
+      // Peer connected to PeerJS
 
-        document
-          .getElementById("code")
+      phonePeer.on("open", function(id) {
+
+        document.getElementById("code")
           .textContent = id;
 
-
-        document
-          .getElementById("phoneStatus")
+        document.getElementById("phoneStatus")
           .textContent =
-          "🟢 Waiting for computer...";
+          "🟢 Ready! Enter the code on your PC.";
 
       });
 
 
-      // Computer calls phone
-      peer.on("call", function(call) {
+      // PC is calling the phone
 
-        // Send phone camera to computer
-        call.answer(stream);
+      phonePeer.on("call", function(call) {
+
+        console.log("PC called phone");
+
+
+        // IMPORTANT:
+        // Send the REAL phone camera stream
+
+        call.answer(phoneStream);
+
+
+        document.getElementById("phoneStatus")
+          .textContent =
+          "🟢 PC connected! Sending camera...";
 
 
         call.on("close", function() {
 
-          document
-            .getElementById("phoneStatus")
+          document.getElementById("phoneStatus")
             .textContent =
-            "Connection closed.";
+            "PC disconnected.";
 
         });
-
-
-        document
-          .getElementById("phoneStatus")
-          .textContent =
-          "🟢 Computer connected!";
 
       });
 
 
-      // Handle errors
-      peer.on("error", function(error) {
+      // Error
 
-        console.log(error);
+      phonePeer.on("error", function(error) {
+
+        console.error("Phone Peer Error:", error);
 
 
-        // If code already exists,
-        // generate another one.
         if (error.type === "unavailable-id") {
 
-          peer.destroy();
+          phonePeer.destroy();
 
           createPhonePeer();
 
         }
-
         else {
 
-          document
-            .getElementById("phoneStatus")
+          document.getElementById("phoneStatus")
             .textContent =
-            "Connection error: " + error.type;
+            "❌ " + error.type;
 
         }
 
@@ -345,23 +336,20 @@
 
 
     // =========================
-    // CONNECT COMPUTER
+    // COMPUTER CONNECT
     // =========================
 
     function connectPC() {
 
       const code =
-        document
-          .getElementById("codeInput")
+        document.getElementById("codeInput")
           .value
           .trim();
 
 
-      // Check code
       if (!/^\d{6}$/.test(code)) {
 
-        document
-          .getElementById("pcStatus")
+        document.getElementById("pcStatus")
           .textContent =
           "⚠️ Enter exactly 6 digits.";
 
@@ -370,98 +358,102 @@
       }
 
 
-      document
-        .getElementById("pcStatus")
+      document.getElementById("pcStatus")
         .textContent =
-        "Connecting...";
+        "Connecting to phone...";
 
 
-      // Destroy old connection
-      if (peer) {
+      if (pcPeer) {
 
-        peer.destroy();
+        pcPeer.destroy();
 
       }
 
 
-      // Create computer Peer
-      peer = new Peer();
+      /*
+        IMPORTANT FIX:
+
+        The PC doesn't need its camera.
+
+        We create a Peer and use a WebRTC
+        connection that only receives the
+        phone's stream.
+      */
+
+      pcPeer = new Peer();
 
 
-      peer.on("open", function() {
+      pcPeer.on("open", function() {
 
-        /*
-          PeerJS normally expects the caller
-          to provide a MediaStream.
-
-          We don't want to use the PC camera,
-          so create a tiny dummy stream.
-        */
-
-        const canvas =
-          document.createElement("canvas");
-
-        canvas.width = 2;
-        canvas.height = 2;
+        console.log("PC Peer ready");
 
 
-        const dummyStream =
-          canvas.captureStream(1);
+        const connection =
+          pcPeer.call(code, null);
 
 
-        // Call the phone
-        const call =
-          peer.call(code, dummyStream);
+        connection.on("stream", function(remoteStream) {
+
+          console.log("PHONE STREAM RECEIVED");
 
 
-        // Receive phone camera
-        call.on("stream", function(remoteStream) {
-
-          document
-            .getElementById("remoteVideo")
-            .srcObject = remoteStream;
+          const video =
+            document.getElementById("remoteVideo");
 
 
-          document
-            .getElementById("pcStatus")
-            .textContent =
-            "🟢 Connected! Live phone camera.";
+          video.srcObject = remoteStream;
+
+
+          video.play()
+            .then(function() {
+
+              document.getElementById("pcStatus")
+                .textContent =
+                "🟢 LIVE! Phone camera received.";
+
+            })
+            .catch(function(error) {
+
+              console.error("Video play error:", error);
+
+              document.getElementById("pcStatus")
+                .textContent =
+                "Stream received — click the video to play.";
+
+            });
 
         });
 
 
-        call.on("close", function() {
+        connection.on("close", function() {
 
-          document
-            .getElementById("pcStatus")
+          document.getElementById("pcStatus")
             .textContent =
-            "Connection closed.";
+            "Phone disconnected.";
 
         });
 
 
-        call.on("error", function(error) {
+        connection.on("error", function(error) {
 
-          document
-            .getElementById("pcStatus")
+          console.error(error);
+
+          document.getElementById("pcStatus")
             .textContent =
-            "Call error: " + error.message;
+            "❌ Call error.";
 
         });
 
       });
 
 
-      // Computer connection error
-      peer.on("error", function(error) {
+      pcPeer.on("error", function(error) {
 
-        console.log(error);
+        console.error("PC Peer Error:", error);
 
-
-        document
-          .getElementById("pcStatus")
+        document.getElementById("pcStatus")
           .textContent =
-          "❌ Error: " + error.type;
+          "❌ " + error.type;
 
       });
 

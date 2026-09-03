@@ -1,0 +1,141 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Phone Webcam</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: Arial, sans-serif;
+            background: #111;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            width: 95%;
+            max-width: 900px;
+            text-align: center;
+        }
+
+        h1 {
+            margin-bottom: 10px;
+        }
+
+        .status {
+            margin: 15px;
+            color: #aaa;
+        }
+
+        video {
+            width: 100%;
+            max-height: 70vh;
+            background: black;
+            border-radius: 15px;
+            object-fit: contain;
+        }
+
+        button {
+            margin: 10px;
+            padding: 14px 25px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        #startBtn {
+            background: #00c853;
+            color: white;
+        }
+
+        #stopBtn {
+            background: #d50000;
+            color: white;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <h1>📱 Phone Webcam</h1>
+
+    <div class="status" id="status">
+        Camera not started
+    </div>
+
+    <video id="camera" autoplay playsinline muted></video>
+
+    <br>
+
+    <button id="startBtn">📷 Start Camera</button>
+    <button id="stopBtn">⛔ Stop Camera</button>
+
+</div>
+
+<script>
+
+const video = document.getElementById("camera");
+const statusText = document.getElementById("status");
+
+let stream = null;
+
+document.getElementById("startBtn").onclick = async () => {
+
+    try {
+
+        stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+                facingMode: "environment"
+            },
+            audio: false
+        });
+
+        video.srcObject = stream;
+
+        statusText.textContent = "🟢 Camera is running";
+
+    } catch (error) {
+
+        console.error(error);
+
+        statusText.textContent =
+            "❌ Camera permission denied or unavailable.";
+
+    }
+
+};
+
+document.getElementById("stopBtn").onclick = () => {
+
+    if (stream) {
+
+        stream.getTracks().forEach(track => track.stop());
+
+        video.srcObject = null;
+
+        statusText.textContent = "🔴 Camera stopped";
+
+        stream = null;
+    }
+
+};
+
+</script>
+
+</body>
+</html>
+```

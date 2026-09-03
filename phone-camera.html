@@ -1,141 +1,501 @@
-```html
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>Phone Webcam</title>
+<title>Phone Webcam</title>
 
-    <style>
-        * {
-            box-sizing: border-box;
-        }
+<style>
+* {
+    box-sizing: border-box;
+}
 
-        body {
-            margin: 0;
-            min-height: 100vh;
-            font-family: Arial, sans-serif;
-            background: #111;
-            color: white;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
+body {
+    margin: 0;
+    min-height: 100vh;
+    background: #111;
+    color: white;
+    font-family: Arial, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
 
-        .container {
-            width: 95%;
-            max-width: 900px;
-            text-align: center;
-        }
+.container {
+    width: 95%;
+    max-width: 850px;
+    text-align: center;
+}
 
-        h1 {
-            margin-bottom: 10px;
-        }
+h1 {
+    margin-bottom: 20px;
+}
 
-        .status {
-            margin: 15px;
-            color: #aaa;
-        }
+.mode-buttons button,
+.action-buttons button {
+    padding: 13px 20px;
+    margin: 6px;
+    border: 0;
+    border-radius: 9px;
+    cursor: pointer;
+    font-size: 15px;
+}
 
-        video {
-            width: 100%;
-            max-height: 70vh;
-            background: black;
-            border-radius: 15px;
-            object-fit: contain;
-        }
+.phone {
+    background: #00c853;
+    color: white;
+}
 
-        button {
-            margin: 10px;
-            padding: 14px 25px;
-            border: none;
-            border-radius: 10px;
-            font-size: 16px;
-            cursor: pointer;
-        }
+.computer {
+    background: #2979ff;
+    color: white;
+}
 
-        #startBtn {
-            background: #00c853;
-            color: white;
-        }
+.stop {
+    background: #d50000;
+    color: white;
+}
 
-        #stopBtn {
-            background: #d50000;
-            color: white;
-        }
-    </style>
+textarea {
+    width: 100%;
+    min-height: 120px;
+    margin-top: 10px;
+    padding: 10px;
+    border-radius: 8px;
+    border: 0;
+    resize: vertical;
+}
+
+video {
+    width: 100%;
+    max-height: 65vh;
+    margin-top: 20px;
+    background: black;
+    border-radius: 15px;
+}
+
+.status {
+    margin: 15px;
+    color: #aaa;
+}
+
+.hidden {
+    display: none;
+}
+
+.panel {
+    background: #1d1d1d;
+    padding: 20px;
+    border-radius: 15px;
+    margin-top: 20px;
+}
+
+.copy {
+    background: #555;
+    color: white;
+}
+</style>
 </head>
 
 <body>
 
 <div class="container">
 
-    <h1>📱 Phone Webcam</h1>
+<h1>📱 Phone Webcam</h1>
 
-    <div class="status" id="status">
-        Camera not started
-    </div>
+<div class="mode-buttons">
+    <button class="phone" onclick="phoneMode()">
+        📱 PHONE
+    </button>
 
-    <video id="camera" autoplay playsinline muted></video>
+    <button class="computer" onclick="computerMode()">
+        💻 COMPUTER
+    </button>
+</div>
 
-    <br>
+<div class="status" id="status">
+    Choose a mode
+</div>
 
-    <button id="startBtn">📷 Start Camera</button>
-    <button id="stopBtn">⛔ Stop Camera</button>
+
+<!-- PHONE -->
+
+<div id="phonePanel" class="panel hidden">
+
+    <h2>📱 Phone Camera</h2>
+
+    <button class="phone" onclick="startCamera()">
+        📷 Start Camera
+    </button>
+
+    <button class="stop" onclick="stopCamera()">
+        ⛔ Stop Camera
+    </button>
+
+    <button class="computer" onclick="createOffer()">
+        🔗 Create Connection
+    </button>
+
+    <h3>Send this code to your computer:</h3>
+
+    <textarea id="offerBox" readonly></textarea>
+
+    <button class="copy" onclick="copyOffer()">
+        📋 Copy Code
+    </button>
+
+    <h3>Paste computer's answer here:</h3>
+
+    <textarea id="answerBox"
+        placeholder="Paste answer here"></textarea>
+
+    <button class="phone" onclick="acceptAnswer()">
+        ✅ Connect
+    </button>
+
+    <video id="phoneVideo"
+        autoplay
+        playsinline
+        muted>
+    </video>
 
 </div>
 
-<script>
 
-const video = document.getElementById("camera");
-const statusText = document.getElementById("status");
+<!-- COMPUTER -->
+
+<div id="computerPanel" class="panel hidden">
+
+    <h2>💻 Computer Viewer</h2>
+
+    <h3>Paste phone's code here:</h3>
+
+    <textarea id="computerOffer"
+        placeholder="Paste phone code here"></textarea>
+
+    <button class="computer" onclick="createAnswer()">
+        🔗 Connect to Phone
+    </button>
+
+    <h3>Send this answer back to the phone:</h3>
+
+    <textarea id="computerAnswer" readonly></textarea>
+
+    <button class="copy" onclick="copyAnswer()">
+        📋 Copy Answer
+    </button>
+
+    <video id="remoteVideo"
+        autoplay
+        playsinline>
+    </video>
+
+</div>
+
+</div>
+
+
+<script>
 
 let stream = null;
 
-document.getElementById("startBtn").onclick = async () => {
+let phonePC = null;
+
+let computerPC = null;
+
+
+/* =========================
+   PHONE MODE
+========================= */
+
+function phoneMode() {
+
+    document
+        .getElementById("phonePanel")
+        .classList.remove("hidden");
+
+    document
+        .getElementById("computerPanel")
+        .classList.add("hidden");
+
+    document.getElementById("status").textContent =
+        "📱 Phone mode";
+
+}
+
+
+/* =========================
+   COMPUTER MODE
+========================= */
+
+function computerMode() {
+
+    document
+        .getElementById("computerPanel")
+        .classList.remove("hidden");
+
+    document
+        .getElementById("phonePanel")
+        .classList.add("hidden");
+
+    document.getElementById("status").textContent =
+        "💻 Computer mode";
+
+}
+
+
+/* =========================
+   START CAMERA
+========================= */
+
+async function startCamera() {
 
     try {
 
-        stream = await navigator.mediaDevices.getUserMedia({
-            video: {
-                facingMode: "environment"
-            },
-            audio: false
-        });
+        stream =
+            await navigator.mediaDevices.getUserMedia({
 
-        video.srcObject = stream;
+                video: {
+                    facingMode: "environment"
+                },
 
-        statusText.textContent = "🟢 Camera is running";
+                audio: false
+
+            });
+
+        document.getElementById("phoneVideo").srcObject =
+            stream;
+
+        document.getElementById("status").textContent =
+            "🟢 Camera running";
 
     } catch (error) {
 
         console.error(error);
 
-        statusText.textContent =
-            "❌ Camera permission denied or unavailable.";
+        document.getElementById("status").textContent =
+            "❌ Camera permission failed";
 
     }
 
-};
+}
 
-document.getElementById("stopBtn").onclick = () => {
 
-    if (stream) {
+/* =========================
+   STOP CAMERA
+========================= */
 
-        stream.getTracks().forEach(track => track.stop());
+function stopCamera() {
 
-        video.srcObject = null;
+    if (!stream) return;
 
-        statusText.textContent = "🔴 Camera stopped";
+    stream.getTracks().forEach(track => {
+        track.stop();
+    });
 
-        stream = null;
+    stream = null;
+
+    document.getElementById("phoneVideo").srcObject =
+        null;
+
+    document.getElementById("status").textContent =
+        "🔴 Camera stopped";
+
+}
+
+
+/* =========================
+   PHONE CREATE OFFER
+========================= */
+
+async function createOffer() {
+
+    if (!stream) {
+
+        alert("Start the camera first.");
+
+        return;
+
     }
 
-};
+    phonePC = new RTCPeerConnection({
+
+        iceServers: [
+            {
+                urls: "stun:stun.l.google.com:19302"
+            }
+        ]
+
+    });
+
+
+    stream.getTracks().forEach(track => {
+
+        phonePC.addTrack(track, stream);
+
+    });
+
+
+    phonePC.onicecandidate = event => {
+
+        if (!event.candidate) {
+
+            document.getElementById("offerBox").value =
+                JSON.stringify(
+                    phonePC.localDescription
+                );
+
+        }
+
+    };
+
+
+    const offer =
+        await phonePC.createOffer();
+
+    await phonePC.setLocalDescription(offer);
+
+}
+
+
+/* =========================
+   PHONE ACCEPT ANSWER
+========================= */
+
+async function acceptAnswer() {
+
+    try {
+
+        const answer =
+            JSON.parse(
+                document.getElementById("answerBox").value
+            );
+
+        await phonePC.setRemoteDescription(answer);
+
+        document.getElementById("status").textContent =
+            "🟢 Connection established";
+
+    } catch (error) {
+
+        console.error(error);
+
+        alert("Invalid answer code.");
+
+    }
+
+}
+
+
+/* =========================
+   COMPUTER CREATE ANSWER
+========================= */
+
+async function createAnswer() {
+
+    try {
+
+        const offer =
+            JSON.parse(
+                document.getElementById("computerOffer").value
+            );
+
+
+        computerPC =
+            new RTCPeerConnection({
+
+                iceServers: [
+                    {
+                        urls:
+                        "stun:stun.l.google.com:19302"
+                    }
+                ]
+
+            });
+
+
+        computerPC.ontrack = event => {
+
+            document.getElementById("remoteVideo")
+                .srcObject =
+                event.streams[0];
+
+            document.getElementById("status").textContent =
+                "🟢 LIVE PHONE CAMERA";
+
+        };
+
+
+        computerPC.onicecandidate = event => {
+
+            if (!event.candidate) {
+
+                document.getElementById("computerAnswer")
+                    .value =
+                    JSON.stringify(
+                        computerPC.localDescription
+                    );
+
+            }
+
+        };
+
+
+        await computerPC.setRemoteDescription(
+            offer
+        );
+
+
+        const answer =
+            await computerPC.createAnswer();
+
+
+        await computerPC.setLocalDescription(
+            answer
+        );
+
+
+    } catch (error) {
+
+        console.error(error);
+
+        alert("Invalid phone code.");
+
+    }
+
+}
+
+
+/* =========================
+   COPY FUNCTIONS
+========================= */
+
+async function copyOffer() {
+
+    const text =
+        document.getElementById("offerBox").value;
+
+    await navigator.clipboard.writeText(text);
+
+    alert("Phone code copied!");
+
+}
+
+
+async function copyAnswer() {
+
+    const text =
+        document.getElementById("computerAnswer").value;
+
+    await navigator.clipboard.writeText(text);
+
+    alert("Answer copied!");
+
+}
 
 </script>
 
 </body>
 </html>
-```

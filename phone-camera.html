@@ -13,19 +13,16 @@
     --panel:#1b1f23;
     --panel-2:#20252a;
     --border:#33393f;
-    --border-soft:#282e33;
     --text:#ecedee;
     --text-dim:#8b9299;
     --text-faint:#565d63;
     --live:#ff5a36;
-    --live-dim:#7a3020;
     --ai:#3ddc97;
     --ai-dim:#1f5c42;
     --danger:#ff5a5a;
     --mono: ui-monospace, "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
     --sans: "Space Grotesk", system-ui, sans-serif;
   }
-
   *{ box-sizing:border-box; }
   html,body{ height:100%; }
   body{
@@ -37,283 +34,66 @@
     align-items:flex-start;
     justify-content:center;
     min-height:100%;
-    padding:0;
     -webkit-tap-highlight-color:transparent;
   }
-
-  #app{
-    width:100%;
-    max-width:460px;
-    min-height:100vh;
-    display:flex;
-    flex-direction:column;
-  }
-
-  .topbar{
-    display:flex;
-    align-items:center;
-    gap:10px;
-    padding:18px 20px 10px 20px;
-  }
-  .dot{
-    width:9px; height:9px;
-    border-radius:50%;
-    background:var(--text-faint);
-    flex-shrink:0;
-    box-shadow:0 0 0 0 rgba(0,0,0,0);
-    transition:background .2s, box-shadow .2s;
-  }
+  #app{ width:100%; max-width:460px; min-height:100vh; display:flex; flex-direction:column; }
+  .topbar{ display:flex; align-items:center; gap:10px; padding:18px 20px 10px 20px; }
+  .dot{ width:9px; height:9px; border-radius:50%; background:var(--text-faint); flex-shrink:0; transition:background .2s, box-shadow .2s; }
   .dot.live{ background:var(--live); box-shadow:0 0 10px 1px rgba(255,90,54,.55); animation:pulse 1.6s ease-in-out infinite; }
   .dot.ai{ background:var(--ai); box-shadow:0 0 10px 1px rgba(61,220,151,.5); }
   .dot.idle{ background:var(--text-faint); box-shadow:none; animation:none; }
   @keyframes pulse{ 0%,100%{ opacity:1;} 50%{ opacity:.45;} }
-
-  .brand{
-    font-weight:600;
-    letter-spacing:.02em;
-    font-size:15px;
-  }
-  .topbar .status-text{
-    margin-left:auto;
-    font-size:12.5px;
-    color:var(--text-dim);
-    font-family:var(--mono);
-  }
-
-  main{
-    flex:1;
-    display:flex;
-    flex-direction:column;
-    padding:6px 20px 28px 20px;
-  }
-
+  .brand{ font-weight:600; letter-spacing:.02em; font-size:15px; }
+  .topbar .status-text{ margin-left:auto; font-size:12.5px; color:var(--text-dim); font-family:var(--mono); }
+  main{ flex:1; display:flex; flex-direction:column; padding:6px 20px 28px 20px; }
   .hidden{ display:none !important; }
-
-  .frame{
-    position:relative;
-    flex:1;
-    display:flex;
-    flex-direction:column;
-    padding:26px 20px;
-    margin-top:6px;
-  }
-  .frame::before, .frame::after,
-  .frame .fc-tr, .frame .fc-br{
-    content:"";
-    position:absolute;
-    width:22px; height:22px;
-    border:2px solid var(--border);
-  }
+  .frame{ position:relative; flex:1; display:flex; flex-direction:column; padding:26px 20px; margin-top:6px; }
+  .frame::before, .frame::after, .frame .fc-tr, .frame .fc-br{ content:""; position:absolute; width:22px; height:22px; border:2px solid var(--border); }
   .frame::before{ top:0; left:0; border-right:none; border-bottom:none; }
   .frame::after{ bottom:0; left:0; border-right:none; border-top:none; }
   .frame .fc-tr{ top:0; right:0; border-left:none; border-bottom:none; }
   .frame .fc-br{ bottom:0; right:0; border-left:none; border-top:none; }
-
-  h1{
-    font-size:26px;
-    line-height:1.2;
-    font-weight:600;
-    margin:10px 0 10px 0;
-  }
-  h2{
-    font-size:19px;
-    font-weight:600;
-    margin:6px 0 18px 0;
-    text-align:center;
-  }
-  p.sub{
-    color:var(--text-dim);
-    font-size:14.5px;
-    line-height:1.55;
-    margin:0 0 30px 0;
-  }
-
-  button{
-    font-family:var(--sans);
-    cursor:pointer;
-  }
-  .btn{
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    width:100%;
-    padding:15px 18px;
-    border-radius:2px;
-    border:1px solid var(--border);
-    background:var(--panel-2);
-    color:var(--text);
-    font-size:15px;
-    font-weight:500;
-    transition:border-color .15s, background .15s;
-  }
+  h1{ font-size:26px; line-height:1.2; font-weight:600; margin:10px 0 10px 0; }
+  h2{ font-size:19px; font-weight:600; margin:6px 0 18px 0; text-align:center; }
+  p.sub{ color:var(--text-dim); font-size:14.5px; line-height:1.55; margin:0 0 30px 0; }
+  button{ font-family:var(--sans); cursor:pointer; }
+  .btn{ display:flex; align-items:center; justify-content:center; width:100%; padding:15px 18px; border-radius:2px; border:1px solid var(--border); background:var(--panel-2); color:var(--text); font-size:15px; font-weight:500; transition:border-color .15s, background .15s; }
   .btn:hover{ border-color:#4a5158; }
   .btn:active{ transform:translateY(1px); }
-  .btn-primary{
-    background:var(--text);
-    color:#14171a;
-    border-color:var(--text);
-    font-weight:600;
-  }
+  .btn-primary{ background:var(--text); color:#14171a; border-color:var(--text); font-weight:600; }
   .btn-primary:hover{ background:#d7d9db; }
-  .btn-primary:disabled{
-    background:var(--panel-2);
-    color:var(--text-faint);
-    border-color:var(--border);
-    cursor:not-allowed;
-  }
-  .btn-live{
-    border-color:var(--live);
-    color:var(--live);
-  }
+  .btn-primary:disabled{ background:var(--panel-2); color:var(--text-faint); border-color:var(--border); cursor:not-allowed; }
+  .btn-live{ border-color:var(--live); color:var(--live); }
   .btn-live:hover{ background:rgba(255,90,54,.08); }
-  .btn-ai{
-    border-color:var(--ai);
-    color:var(--ai);
-  }
+  .btn-ai{ border-color:var(--ai); color:var(--ai); }
   .btn-ai:hover{ background:rgba(61,220,151,.08); }
-  .link{
-    background:none;
-    border:none;
-    color:var(--text-dim);
-    font-size:13.5px;
-    padding:14px 4px 0 4px;
-    text-decoration:underline;
-    text-underline-offset:3px;
-    width:auto;
-    align-self:center;
-  }
+  .link{ background:none; border:none; color:var(--text-dim); font-size:13.5px; padding:14px 4px 0 4px; text-decoration:underline; text-underline-offset:3px; width:auto; align-self:center; }
   .link:hover{ color:var(--text); }
-
   .role-buttons{ display:flex; flex-direction:column; gap:12px; margin-top:auto; }
   .role-buttons .btn{ text-align:left; justify-content:flex-start; padding:18px; }
-  .role-buttons .btn .role-kicker{
-    display:block;
-    font-family:var(--mono);
-    font-size:11px;
-    color:var(--text-faint);
-    margin-bottom:5px;
-    letter-spacing:.03em;
-  }
+  .role-buttons .btn .role-kicker{ display:block; font-family:var(--mono); font-size:11px; color:var(--text-faint); margin-bottom:5px; letter-spacing:.03em; }
   .role-buttons .btn:first-child .role-kicker{ color:var(--live); }
   .role-buttons .btn:last-child .role-kicker{ color:var(--ai); }
-
-  #phone-preview{
-    width:100%;
-    aspect-ratio: 3/4;
-    background:#000;
-    border:1px solid var(--border);
-    object-fit:cover;
-    display:block;
-  }
-  .code-block{
-    margin-top:22px;
-    text-align:center;
-  }
-  .code-label{
-    font-size:12px;
-    color:var(--text-dim);
-    margin-bottom:8px;
-  }
-  .code-value{
-    font-family:var(--mono);
-    font-size:40px;
-    font-weight:600;
-    letter-spacing:.14em;
-    color:var(--text);
-  }
+  #phone-preview{ width:100%; aspect-ratio: 3/4; background:#000; border:1px solid var(--border); object-fit:cover; display:block; }
+  .code-block{ margin-top:22px; text-align:center; }
+  .code-label{ font-size:12px; color:var(--text-dim); margin-bottom:8px; }
+  .code-value{ font-family:var(--mono); font-size:40px; font-weight:600; letter-spacing:.14em; color:var(--text); }
   .code-value.pending{ color:var(--text-faint); }
-  .code-row{
-    display:flex;
-    gap:10px;
-    margin-top:16px;
-  }
-  .status-row{
-    display:flex;
-    align-items:center;
-    gap:9px;
-    font-size:13.5px;
-    color:var(--text-dim);
-    margin-bottom:16px;
-    min-height:18px;
-  }
-
-  .code-input{
-    width:100%;
-    background:var(--panel);
-    border:1px solid var(--border);
-    color:var(--text);
-    font-family:var(--mono);
-    font-size:32px;
-    letter-spacing:.4em;
-    text-align:center;
-    padding:16px 0 16px 12px;
-    border-radius:2px;
-    outline:none;
-  }
+  .code-row{ display:flex; gap:10px; margin-top:16px; }
+  .status-row{ display:flex; align-items:center; gap:9px; font-size:13.5px; color:var(--text-dim); margin-bottom:16px; min-height:18px; }
+  .code-input{ width:100%; background:var(--panel); border:1px solid var(--border); color:var(--text); font-family:var(--mono); font-size:32px; letter-spacing:.4em; text-align:center; padding:16px 0 16px 12px; border-radius:2px; outline:none; }
   .code-input:focus{ border-color:var(--text-dim); }
-  .field-hint{
-    font-size:12.5px;
-    color:var(--text-faint);
-    text-align:center;
-    margin:10px 0 26px 0;
-  }
-  .field-error{
-    font-size:13px;
-    color:var(--danger);
-    text-align:center;
-    min-height:18px;
-    margin-top:14px;
-  }
-
-  .video-wrap{
-    position:relative;
-    width:100%;
-    background:#000;
-    border:1px solid var(--border);
-    overflow:hidden;
-  }
+  .field-hint{ font-size:12.5px; color:var(--text-faint); text-align:center; margin:10px 0 26px 0; }
+  .field-error{ font-size:13px; color:var(--danger); text-align:center; min-height:18px; margin-top:14px; }
+  .video-wrap{ position:relative; width:100%; background:#000; border:1px solid var(--border); overflow:hidden; }
   #pc-video{ width:100%; display:block; }
-  #pc-overlay{
-    position:absolute;
-    top:0; left:0;
-    width:100%; height:100%;
-    pointer-events:none;
-  }
-  .controls-row{
-    display:flex;
-    align-items:center;
-    gap:14px;
-    margin-top:16px;
-  }
+  #pc-overlay{ position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; }
+  .controls-row{ display:flex; align-items:center; gap:14px; margin-top:16px; }
   .controls-row .btn{ width:auto; flex:1; }
-  #detect-status{
-    font-family:var(--mono);
-    font-size:12px;
-    color:var(--text-dim);
-  }
-  .detect-list{
-    margin-top:16px;
-    display:flex;
-    flex-wrap:wrap;
-    gap:8px;
-  }
-  .detect-chip{
-    font-family:var(--mono);
-    font-size:12px;
-    padding:5px 9px;
-    border:1px solid var(--ai-dim);
-    color:var(--ai);
-    border-radius:2px;
-    background:rgba(61,220,151,.06);
-  }
-
-  .footnote{
-    text-align:center;
-    color:var(--text-faint);
-    font-size:11.5px;
-    padding:16px 26px 4px 26px;
-    line-height:1.5;
-  }
+  #detect-status{ font-family:var(--mono); font-size:12px; color:var(--text-dim); }
+  .detect-list{ margin-top:16px; display:flex; flex-wrap:wrap; gap:8px; }
+  .detect-chip{ font-family:var(--mono); font-size:12px; padding:5px 9px; border:1px solid var(--ai-dim); color:var(--ai); border-radius:2px; background:rgba(61,220,151,.06); }
+  .footnote{ text-align:center; color:var(--text-faint); font-size:11.5px; padding:16px 26px 4px 26px; line-height:1.5; }
 </style>
 </head>
 <body>
@@ -330,7 +110,7 @@
     <section class="frame" id="screen-role">
       <span class="fc-tr"></span><span class="fc-br"></span>
       <h1>Turn a phone into a wireless camera for this computer.</h1>
-      <p class="sub">One device streams live video, the other watches it — over the internet, linked by a one-time 6-digit code. No app install.</p>
+      <p class="sub">One device streams live video, the other watches it, linked by a one-time 6-digit code. Works best when both devices share one network (Wi-Fi, hotspot, or USB tethering).</p>
       <div class="role-buttons">
         <button class="btn btn-live" id="btn-role-phone">
           <span>
@@ -395,7 +175,7 @@
 
   </main>
 
-  <div class="footnote">Needs an internet connection on both devices. If the phone's browser blocks the camera, open this page over HTTPS (camera access is refused on plain HTTP except localhost).</div>
+  <div class="footnote">Uses a free public signaling service only to help the two devices find each other — your video never passes through it. For best results, connect the phone and computer to the same network (Wi-Fi, mobile hotspot, or USB tethering).</div>
 </div>
 
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
@@ -403,17 +183,10 @@
 (function(){
   "use strict";
 
-  // ---------- ICE config: STUN for discovery + free TURN relay as fallback ----------
-  var ICE_CONFIG = {
-    iceServers: [
-      { urls: "stun:stun.l.google.com:19302" },
-      { urls: "turn:openrelay.metered.ca:80", username: "openrelayproject", credential: "openrelayproject" },
-      { urls: "turn:openrelay.metered.ca:443", username: "openrelayproject", credential: "openrelayproject" },
-      { urls: "turn:openrelay.metered.ca:443?transport=tcp", username: "openrelayproject", credential: "openrelayproject" }
-    ]
-  };
+  // STUN only — no third-party TURN relay. Works when both devices share
+  // one network (same Wi-Fi, phone hotspot, or USB tethering).
+  var ICE_CONFIG = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
 
-  // ---------- shared state ----------
   var peer = null;
   var phoneStream = null;
   var activeCall = null;
@@ -423,9 +196,8 @@
   var detecting = false;
   var detectRafId = null;
 
-  var PEER_PREFIX = "signal-aiwc-"; // namespacing to reduce collisions on the shared public broker
+  var PEER_PREFIX = "signal-aiwc-";
 
-  // ---------- element refs ----------
   var screens = {
     role: document.getElementById("screen-role"),
     phone: document.getElementById("screen-phone"),
@@ -456,7 +228,6 @@
 
   window.addEventListener("beforeunload", teardownPeer);
 
-  // ---------- role select ----------
   document.getElementById("btn-role-phone").addEventListener("click", function(){
     showScreen("phone");
     setGlobal("idle", "camera mode");
@@ -623,10 +394,10 @@
 
       connectTimeoutId = setTimeout(function(){
         pcEntryError.style.color = "var(--danger)";
-        pcEntryError.textContent = "No camera responded to that code. Check it and try again.";
+        pcEntryError.textContent = "No camera responded to that code. Make sure both devices share the same network and try again.";
         btnConnect.disabled = false;
         teardownPeer();
-      }, 20000);
+      }, 15000);
 
       call.on("stream", function(remoteStream){
         clearTimeout(connectTimeoutId); connectTimeoutId = null;

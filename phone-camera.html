@@ -2,962 +2,797 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>Phone Camera → PC</title>
-
-<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<title>Signal — phone as AI camera</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-* {
-  box-sizing: border-box;
-}
+  :root{
+    --bg:#14171a;
+    --panel:#1b1f23;
+    --panel-2:#20252a;
+    --border:#33393f;
+    --border-soft:#282e33;
+    --text:#ecedee;
+    --text-dim:#8b9299;
+    --text-faint:#565d63;
+    --live:#ff5a36;
+    --live-dim:#7a3020;
+    --ai:#3ddc97;
+    --ai-dim:#1f5c42;
+    --danger:#ff5a5a;
+    --mono: ui-monospace, "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+    --sans: "Space Grotesk", system-ui, sans-serif;
+  }
 
-body {
-  margin: 0;
-  padding: 20px;
-  background: #101218;
-  color: white;
-  font-family: Arial, sans-serif;
-  text-align: center;
-}
+  *{ box-sizing:border-box; }
+  html,body{ height:100%; }
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:var(--sans);
+    display:flex;
+    align-items:flex-start;
+    justify-content:center;
+    min-height:100%;
+    padding:0;
+    -webkit-tap-highlight-color:transparent;
+  }
 
-h1 {
-  margin-bottom: 25px;
-}
+  #app{
+    width:100%;
+    max-width:460px;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+  }
 
-.box {
-  max-width: 800px;
-  margin: 20px auto;
-  padding: 25px;
-  background: #1b1e26;
-  border-radius: 18px;
-}
+  /* ---- top bar ---- */
+  .topbar{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:18px 20px 10px 20px;
+  }
+  .dot{
+    width:9px; height:9px;
+    border-radius:50%;
+    background:var(--text-faint);
+    flex-shrink:0;
+    box-shadow:0 0 0 0 rgba(0,0,0,0);
+    transition:background .2s, box-shadow .2s;
+  }
+  .dot.live{ background:var(--live); box-shadow:0 0 10px 1px rgba(255,90,54,.55); animation:pulse 1.6s ease-in-out infinite; }
+  .dot.ai{ background:var(--ai); box-shadow:0 0 10px 1px rgba(61,220,151,.5); }
+  .dot.idle{ background:var(--text-faint); box-shadow:none; animation:none; }
+  @keyframes pulse{ 0%,100%{ opacity:1;} 50%{ opacity:.45;} }
 
-button,
-input {
-  padding: 14px 18px;
-  margin: 6px;
-  border: none;
-  border-radius: 10px;
-  font-size: 17px;
-}
+  .brand{
+    font-weight:600;
+    letter-spacing:.02em;
+    font-size:15px;
+  }
+  .topbar .status-text{
+    margin-left:auto;
+    font-size:12.5px;
+    color:var(--text-dim);
+    font-family:var(--mono);
+  }
 
-button {
-  cursor: pointer;
-  font-weight: bold;
-}
+  main{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    padding:6px 20px 28px 20px;
+  }
 
-input {
-  width: 190px;
-  text-align: center;
-  letter-spacing: 4px;
-}
+  .hidden{ display:none !important; }
 
-video {
-  width: 100%;
-  max-height: 70vh;
-  margin-top: 20px;
-  background: black;
-  border-radius: 15px;
-}
+  /* ---- viewfinder frame, the one recurring visual device ---- */
+  .frame{
+    position:relative;
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    padding:26px 20px;
+    margin-top:6px;
+  }
+  .frame::before, .frame::after,
+  .frame .fc-tr, .frame .fc-br{
+    content:"";
+    position:absolute;
+    width:22px; height:22px;
+    border:2px solid var(--border);
+  }
+  .frame::before{ top:0; left:0; border-right:none; border-bottom:none; }
+  .frame::after{ bottom:0; left:0; border-right:none; border-top:none; }
+  .frame .fc-tr{ top:0; right:0; border-left:none; border-bottom:none; }
+  .frame .fc-br{ bottom:0; right:0; border-left:none; border-top:none; }
 
-#code {
-  font-size: 42px;
-  font-weight: bold;
-  letter-spacing: 8px;
-  margin: 25px;
-}
+  h1{
+    font-size:26px;
+    line-height:1.2;
+    font-weight:600;
+    margin:10px 0 10px 0;
+  }
+  h2{
+    font-size:19px;
+    font-weight:600;
+    margin:6px 0 18px 0;
+    text-align:center;
+  }
+  p.sub{
+    color:var(--text-dim);
+    font-size:14.5px;
+    line-height:1.55;
+    margin:0 0 30px 0;
+  }
 
-.status {
-  margin: 15px;
-  color: #bbb;
-}
+  /* ---- buttons ---- */
+  button{
+    font-family:var(--sans);
+    cursor:pointer;
+  }
+  .btn{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    width:100%;
+    padding:15px 18px;
+    border-radius:2px;
+    border:1px solid var(--border);
+    background:var(--panel-2);
+    color:var(--text);
+    font-size:15px;
+    font-weight:500;
+    transition:border-color .15s, background .15s;
+  }
+  .btn:hover{ border-color:#4a5158; }
+  .btn:active{ transform:translateY(1px); }
+  .btn-primary{
+    background:var(--text);
+    color:#14171a;
+    border-color:var(--text);
+    font-weight:600;
+  }
+  .btn-primary:hover{ background:#d7d9db; }
+  .btn-primary:disabled{
+    background:var(--panel-2);
+    color:var(--text-faint);
+    border-color:var(--border);
+    cursor:not-allowed;
+  }
+  .btn-live{
+    border-color:var(--live);
+    color:var(--live);
+  }
+  .btn-live:hover{ background:rgba(255,90,54,.08); }
+  .btn-ai{
+    border-color:var(--ai);
+    color:var(--ai);
+  }
+  .btn-ai:hover{ background:rgba(61,220,151,.08); }
+  .btn-danger-outline{
+    border-color:var(--border);
+    color:var(--text-dim);
+  }
+  .link{
+    background:none;
+    border:none;
+    color:var(--text-dim);
+    font-size:13.5px;
+    padding:14px 4px 0 4px;
+    text-decoration:underline;
+    text-underline-offset:3px;
+    width:auto;
+    align-self:center;
+  }
+  .link:hover{ color:var(--text); }
 
-.hidden {
-  display: none;
-}
+  .role-buttons{ display:flex; flex-direction:column; gap:12px; margin-top:auto; }
+  .role-buttons .btn{ text-align:left; justify-content:flex-start; padding:18px; }
+  .role-buttons .btn .role-kicker{
+    display:block;
+    font-family:var(--mono);
+    font-size:11px;
+    color:var(--text-faint);
+    margin-bottom:5px;
+    letter-spacing:.03em;
+  }
+  .role-buttons .btn:first-child .role-kicker{ color:var(--live); }
+  .role-buttons .btn:last-child .role-kicker{ color:var(--ai); }
+
+  /* ---- phone screen ---- */
+  #phone-preview{
+    width:100%;
+    aspect-ratio: 3/4;
+    background:#000;
+    border:1px solid var(--border);
+    object-fit:cover;
+    display:block;
+  }
+  .code-block{
+    margin-top:22px;
+    text-align:center;
+  }
+  .code-label{
+    font-size:12px;
+    color:var(--text-dim);
+    margin-bottom:8px;
+  }
+  .code-value{
+    font-family:var(--mono);
+    font-size:40px;
+    font-weight:600;
+    letter-spacing:.14em;
+    color:var(--text);
+  }
+  .code-value.pending{ color:var(--text-faint); }
+  .code-row{
+    display:flex;
+    gap:10px;
+    margin-top:16px;
+  }
+  .status-row{
+    display:flex;
+    align-items:center;
+    gap:9px;
+    font-size:13.5px;
+    color:var(--text-dim);
+    margin-bottom:16px;
+    min-height:18px;
+  }
+
+  /* ---- pc entry ---- */
+  .code-input{
+    width:100%;
+    background:var(--panel);
+    border:1px solid var(--border);
+    color:var(--text);
+    font-family:var(--mono);
+    font-size:32px;
+    letter-spacing:.4em;
+    text-align:center;
+    padding:16px 0 16px 12px;
+    border-radius:2px;
+    outline:none;
+  }
+  .code-input:focus{ border-color:var(--text-dim); }
+  .field-hint{
+    font-size:12.5px;
+    color:var(--text-faint);
+    text-align:center;
+    margin:10px 0 26px 0;
+  }
+  .field-error{
+    font-size:13px;
+    color:var(--danger);
+    text-align:center;
+    min-height:18px;
+    margin-top:14px;
+  }
+
+  /* ---- pc viewer ---- */
+  .video-wrap{
+    position:relative;
+    width:100%;
+    background:#000;
+    border:1px solid var(--border);
+    overflow:hidden;
+  }
+  #pc-video{ width:100%; display:block; }
+  #pc-overlay{
+    position:absolute;
+    top:0; left:0;
+    width:100%; height:100%;
+    pointer-events:none;
+  }
+  .controls-row{
+    display:flex;
+    align-items:center;
+    gap:14px;
+    margin-top:16px;
+  }
+  .controls-row .btn{ width:auto; flex:1; }
+  #detect-status{
+    font-family:var(--mono);
+    font-size:12px;
+    color:var(--text-dim);
+  }
+  .detect-list{
+    margin-top:16px;
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+  }
+  .detect-chip{
+    font-family:var(--mono);
+    font-size:12px;
+    padding:5px 9px;
+    border:1px solid var(--ai-dim);
+    color:var(--ai);
+    border-radius:2px;
+    background:rgba(61,220,151,.06);
+  }
+
+  .footnote{
+    text-align:center;
+    color:var(--text-faint);
+    font-size:11.5px;
+    padding:16px 26px 4px 26px;
+    line-height:1.5;
+  }
 </style>
 </head>
-
 <body>
+<div id="app">
 
-<h1>📱 Phone Camera → 💻 PC</h1>
-
-<div class="box">
-  <button onclick="showPhone()">📱 PHONE</button>
-  <button onclick="showPC()">💻 COMPUTER</button>
-</div>
-
-
-<!-- PHONE -->
-
-<div id="phoneBox" class="box hidden">
-
-  <h2>📱 Phone Camera</h2>
-
-  <button onclick="startPhone()">
-    Start Camera
-  </button>
-
-  <div id="code">------</div>
-
-  <p>Enter this code on your computer.</p>
-
-  <div id="phoneStatus" class="status">
-    Camera not started.
+  <div class="topbar">
+    <span class="dot idle" id="global-dot"></span>
+    <span class="brand">SIGNAL</span>
+    <span class="status-text" id="global-status">idle</span>
   </div>
 
-  <video
-    id="phoneVideo"
-    autoplay
-    muted
-    playsinline>
-  </video>
+  <main>
 
+    <!-- ROLE SELECT -->
+    <section class="frame" id="screen-role">
+      <span class="fc-tr"></span><span class="fc-br"></span>
+      <h1>Turn a phone into a wireless camera for this computer.</h1>
+      <p class="sub">One device streams live video, the other watches it — over the internet, linked by a one-time 6-digit code. No app install.</p>
+      <div class="role-buttons">
+        <button class="btn btn-live" id="btn-role-phone">
+          <span>
+            <span class="role-kicker">● THIS DEVICE IS THE CAMERA</span>
+            Use my phone to stream video
+          </span>
+        </button>
+        <button class="btn btn-ai" id="btn-role-pc">
+          <span>
+            <span class="role-kicker">◆ THIS DEVICE IS THE VIEWER</span>
+            Watch a stream + run AI detection
+          </span>
+        </button>
+      </div>
+    </section>
+
+    <!-- PHONE (CAMERA) SCREEN -->
+    <section class="frame hidden" id="screen-phone">
+      <span class="fc-tr"></span><span class="fc-br"></span>
+      <div class="status-row">
+        <span class="dot idle" id="phone-dot"></span>
+        <span id="phone-status">Starting camera…</span>
+      </div>
+      <video id="phone-preview" autoplay playsinline muted></video>
+      <div class="code-block">
+        <div class="code-label">Enter this code on the computer</div>
+        <div class="code-value pending" id="phone-code">------</div>
+      </div>
+      <div class="code-row">
+        <button class="btn" id="btn-copy-code">Copy code</button>
+        <button class="btn" id="btn-new-code">New code</button>
+      </div>
+      <button class="link" id="btn-back-phone">Back</button>
+    </section>
+
+    <!-- PC (VIEWER) SCREENS -->
+    <section class="frame hidden" id="screen-pc-entry">
+      <span class="fc-tr"></span><span class="fc-br"></span>
+      <h2>Enter the code shown on the phone</h2>
+      <input class="code-input" id="pc-code-input" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="000000" autocomplete="off">
+      <div class="field-hint">6 digits, no spaces</div>
+      <button class="btn btn-primary" id="btn-connect" disabled>Connect</button>
+      <div class="field-error" id="pc-entry-error"></div>
+      <button class="link" id="btn-back-pc">Back</button>
+    </section>
+
+    <section class="frame hidden" id="screen-pc-viewer">
+      <span class="fc-tr"></span><span class="fc-br"></span>
+      <div class="status-row">
+        <span class="dot live" id="pc-dot"></span>
+        <span id="pc-status">Connected</span>
+      </div>
+      <div class="video-wrap">
+        <video id="pc-video" autoplay playsinline></video>
+        <canvas id="pc-overlay"></canvas>
+      </div>
+      <div class="controls-row">
+        <button class="btn btn-ai" id="btn-toggle-ai">Start AI detection</button>
+        <span id="detect-status"></span>
+      </div>
+      <div class="detect-list" id="detect-list"></div>
+      <button class="link" id="btn-disconnect">Disconnect</button>
+    </section>
+
+  </main>
+
+  <div class="footnote">Needs an internet connection on both devices. If the phone's browser blocks the camera, open this page over HTTPS (camera access is refused on plain HTTP except localhost).</div>
 </div>
 
-
-<!-- PC -->
-
-<div id="pcBox" class="box hidden">
-
-  <h2>💻 Computer</h2>
-
-  <input
-    id="codeInput"
-    type="text"
-    inputmode="numeric"
-    maxlength="6"
-    placeholder="6-digit code">
-
-  <button onclick="connectPC()">
-    Connect
-  </button>
-
-  <div id="pcStatus" class="status">
-    Enter the phone code.
-  </div>
-
-  <video
-    id="pcVideo"
-    autoplay
-    playsinline>
-  </video>
-
-</div>
-
-
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script>
+(function(){
+  "use strict";
 
-/* =================================================
-   VARIABLES
-================================================= */
+  // ---------- shared state ----------
+  var peer = null;
+  var phoneStream = null;
+  var activeCall = null;
+  var connectTimeoutId = null;
 
-let phonePeer = null;
-let phoneStream = null;
-let phoneDataConnection = null;
-let phoneRTC = null;
+  var cocoModel = null;
+  var modelLoading = false;
+  var detecting = false;
+  var detectRafId = null;
 
-let pcPeer = null;
-let pcDataConnection = null;
-let pcRTC = null;
+  var PEER_PREFIX = "signal-aiwc-"; // namespacing to reduce collisions on the shared public broker
 
+  // ---------- element refs ----------
+  var screens = {
+    role: document.getElementById("screen-role"),
+    phone: document.getElementById("screen-phone"),
+    pcEntry: document.getElementById("screen-pc-entry"),
+    pcViewer: document.getElementById("screen-pc-viewer")
+  };
+  var globalDot = document.getElementById("global-dot");
+  var globalStatus = document.getElementById("global-status");
 
-/* =================================================
-   PEERJS CONFIG
-================================================= */
+  function showScreen(name){
+    Object.keys(screens).forEach(function(k){
+      screens[k].classList.toggle("hidden", k !== name);
+    });
+  }
 
-const peerConfig = {
-  host: "0.peerjs.com",
-  port: 443,
-  secure: true,
-  path: "/"
-};
+  function setGlobal(dotClass, text){
+    globalDot.className = "dot " + dotClass;
+    globalStatus.textContent = text;
+  }
 
+  function teardownPeer(){
+    if (connectTimeoutId){ clearTimeout(connectTimeoutId); connectTimeoutId = null; }
+    stopDetection();
+    if (activeCall){ try{ activeCall.close(); }catch(e){} activeCall = null; }
+    if (phoneStream){ phoneStream.getTracks().forEach(function(t){ t.stop(); }); phoneStream = null; }
+    if (peer){ try{ peer.destroy(); }catch(e){} peer = null; }
+  }
 
-/* =================================================
-   MODE
-================================================= */
+  window.addEventListener("beforeunload", teardownPeer);
 
-function showPhone() {
+  // ---------- role select ----------
+  document.getElementById("btn-role-phone").addEventListener("click", function(){
+    showScreen("phone");
+    setGlobal("idle", "camera mode");
+    startPhoneFlow();
+  });
+  document.getElementById("btn-role-pc").addEventListener("click", function(){
+    showScreen("pcEntry");
+    setGlobal("idle", "viewer mode");
+    document.getElementById("pc-code-input").focus();
+  });
+  document.getElementById("btn-back-phone").addEventListener("click", function(){
+    teardownPeer();
+    showScreen("role");
+    setGlobal("idle", "idle");
+  });
+  document.getElementById("btn-back-pc").addEventListener("click", function(){
+    teardownPeer();
+    showScreen("role");
+    setGlobal("idle", "idle");
+  });
+  document.getElementById("btn-disconnect").addEventListener("click", function(){
+    teardownPeer();
+    showScreen("pcEntry");
+    setGlobal("idle", "viewer mode");
+    document.getElementById("pc-entry-error").textContent = "";
+  });
 
-  document
-    .getElementById("phoneBox")
-    .classList.remove("hidden");
+  // ============================================================
+  // PHONE (CAMERA) FLOW
+  // ============================================================
+  var phoneDot = document.getElementById("phone-dot");
+  var phoneStatus = document.getElementById("phone-status");
+  var phoneCodeEl = document.getElementById("phone-code");
+  var phonePreview = document.getElementById("phone-preview");
 
-  document
-    .getElementById("pcBox")
-    .classList.add("hidden");
-}
+  function randomCode(){
+    return String(Math.floor(100000 + Math.random() * 900000));
+  }
 
+  function startPhoneFlow(){
+    teardownPeer();
+    phoneCodeEl.textContent = "------";
+    phoneCodeEl.classList.add("pending");
+    phoneDot.className = "dot idle";
+    phoneStatus.textContent = "Requesting camera access…";
 
-function showPC() {
+    var constraints = {
+      video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } },
+      audio: false
+    };
 
-  document
-    .getElementById("pcBox")
-    .classList.remove("hidden");
+    navigator.mediaDevices.getUserMedia(constraints).then(function(stream){
+      phoneStream = stream;
+      phonePreview.srcObject = stream;
+      phoneStatus.textContent = "Camera ready. Opening connection…";
+      openPhonePeer();
+    }).catch(function(err){
+      phoneStatus.textContent = "Camera access failed: " + (err && err.message ? err.message : err);
+      phoneDot.className = "dot idle";
+    });
+  }
 
-  document
-    .getElementById("phoneBox")
-    .classList.add("hidden");
-}
+  function openPhonePeer(attempt){
+    attempt = attempt || 1;
+    var code = randomCode();
+    var id = PEER_PREFIX + code;
 
+    if (peer){ try{ peer.destroy(); }catch(e){} }
+    peer = new Peer(id, { debug: 0 });
 
-/* =================================================
-   CODE
-================================================= */
+    peer.on("open", function(){
+      phoneCodeEl.textContent = code.slice(0,3) + " " + code.slice(3);
+      phoneCodeEl.classList.remove("pending");
+      phoneStatus.textContent = "Waiting for the computer to connect…";
+      phoneDot.className = "dot idle";
+    });
 
-function generateCode() {
+    peer.on("call", function(call){
+      activeCall = call;
+      call.answer(phoneStream);
+      phoneStatus.textContent = "Connected — streaming live";
+      phoneDot.className = "dot live";
+      setGlobal("live", "streaming");
 
-  return String(
-    Math.floor(
-      100000 + Math.random() * 900000
-    )
-  );
-
-}
-
-
-/* =================================================
-   PHONE START
-================================================= */
-
-async function startPhone() {
-
-  const status =
-    document.getElementById("phoneStatus");
-
-  try {
-
-    status.textContent =
-      "📷 Opening camera...";
-
-
-    /* GET CAMERA */
-
-    phoneStream =
-      await navigator.mediaDevices.getUserMedia({
-
-        video: {
-          facingMode: {
-            ideal: "environment"
-          },
-
-          width: {
-            ideal: 1280
-          },
-
-          height: {
-            ideal: 720
-          }
-        },
-
-        audio: false
-
+      call.on("close", function(){
+        phoneStatus.textContent = "Viewer disconnected. Waiting again…";
+        phoneDot.className = "dot idle";
+        setGlobal("idle", "camera mode");
       });
+    });
 
-
-    /* SHOW CAMERA */
-
-    const video =
-      document.getElementById("phoneVideo");
-
-    video.srcObject =
-      phoneStream;
-
-    await video.play();
-
-
-    status.textContent =
-      "🌐 Connecting...";
-
-
-    createPhonePeer();
-
-  }
-
-  catch (error) {
-
-    console.error(error);
-
-    status.textContent =
-      "❌ Camera error: " +
-      error.message;
-
-  }
-
-}
-
-
-/* =================================================
-   PHONE PEER
-================================================= */
-
-function createPhonePeer() {
-
-  const status =
-    document.getElementById("phoneStatus");
-
-  const code =
-    generateCode();
-
-
-  phonePeer =
-    new Peer(
-      code,
-      peerConfig
-    );
-
-
-  /* PEER READY */
-
-  phonePeer.on(
-    "open",
-    function(id) {
-
-      console.log(
-        "PHONE PEER:",
-        id
-      );
-
-
-      document
-        .getElementById("code")
-        .textContent = id;
-
-
-      status.textContent =
-        "🟢 Ready! Waiting for PC...";
-
-    }
-  );
-
-
-  /* PC CONNECTS */
-
-  phonePeer.on(
-    "connection",
-    function(connection) {
-
-      console.log(
-        "💻 PC FOUND"
-      );
-
-
-      phoneDataConnection =
-        connection;
-
-
-      status.textContent =
-        "🟡 PC found! Connecting...";
-
-
-      connection.on(
-        "open",
-        function() {
-
-          console.log(
-            "🟢 DATA CONNECTION OPEN"
-          );
-
-
-          status.textContent =
-            "🟡 Starting video...";
-
-
-          startPhoneWebRTC(
-            connection
-          );
-
-        }
-      );
-
-
-      connection.on(
-        "error",
-        function(error) {
-
-          console.error(
-            "DATA ERROR:",
-            error
-          );
-
-          status.textContent =
-            "❌ Data connection error.";
-
-        }
-      );
-
-    }
-  );
-
-
-  /* PEER ERROR */
-
-  phonePeer.on(
-    "error",
-    function(error) {
-
-      console.error(
-        "PHONE PEER ERROR:",
-        error
-      );
-
-
-      if (
-        error.type ===
-        "unavailable-id"
-      ) {
-
-        phonePeer.destroy();
-
-        status.textContent =
-          "🔄 Creating new code...";
-
-        setTimeout(
-          createPhonePeer,
-          500
-        );
-
+    peer.on("error", function(err){
+      if (err && err.type === "unavailable-id" && attempt < 5){
+        openPhonePeer(attempt + 1); // extremely rare collision on the shared broker, retry with a new code
         return;
       }
-
-
-      status.textContent =
-        "❌ " + error.type;
-
-    }
-  );
-
-}
-
-
-/* =================================================
-   PHONE WEBRTC
-================================================= */
-
-async function startPhoneWebRTC(
-  connection
-) {
-
-  console.log(
-    "📹 Creating WebRTC"
-  );
-
-
-  /* CREATE RTC */
-
-  phoneRTC =
-    new RTCPeerConnection({
-
-      iceServers: [
-
-        {
-          urls:
-            "stun:stun.l.google.com:19302"
-        }
-
-      ]
-
+      phoneStatus.textContent = "Connection error: " + (err && err.type ? err.type : "unknown") + ". Tap \u201cNew code\u201d to retry.";
+      phoneDot.className = "dot idle";
     });
 
-
-  /* ADD CAMERA */
-
-  phoneStream
-    .getTracks()
-    .forEach(function(track) {
-
-      phoneRTC.addTrack(
-        track,
-        phoneStream
-      );
-
+    peer.on("disconnected", function(){
+      phoneStatus.textContent = "Lost connection to the signaling service. Tap \u201cNew code\u201d to retry.";
+      phoneDot.className = "dot idle";
     });
+  }
 
-
-  /* RTC STATUS */
-
-  phoneRTC.onconnectionstatechange =
-    function() {
-
-      console.log(
-        "PHONE RTC:",
-        phoneRTC.connectionState
-      );
-
-    };
-
-
-  /* CREATE OFFER */
-
-  const offer =
-    await phoneRTC.createOffer();
-
-
-  await phoneRTC.setLocalDescription(
-    offer
-  );
-
-
-  /* SEND OFFER */
-
-  connection.send({
-
-    type: "OFFER",
-
-    sdp:
-      phoneRTC.localDescription
-
+  document.getElementById("btn-new-code").addEventListener("click", function(){
+    if (!phoneStream) return;
+    phoneStatus.textContent = "Generating a new code…";
+    openPhonePeer();
   });
 
-
-  console.log(
-    "📡 OFFER SENT"
-  );
-
-
-  document
-    .getElementById("phoneStatus")
-    .textContent =
-    "🟡 Sending camera to PC...";
-
-
-  /* RECEIVE ANSWER */
-
-  connection.on(
-    "data",
-    async function(message) {
-
-      console.log(
-        "PHONE RECEIVED:",
-        message
-      );
-
-
-      if (
-        message &&
-        message.type === "ANSWER"
-      ) {
-
-        console.log(
-          "✅ ANSWER RECEIVED"
-        );
-
-
-        await phoneRTC.setRemoteDescription(
-          message.sdp
-        );
-
-
-        document
-          .getElementById("phoneStatus")
-          .textContent =
-          "🟢 LIVE! Camera connected.";
-
-      }
-
+  document.getElementById("btn-copy-code").addEventListener("click", function(){
+    var raw = phoneCodeEl.textContent.replace(/\s/g, "");
+    if (raw === "------") return;
+    if (navigator.clipboard){
+      navigator.clipboard.writeText(raw).then(function(){
+        var btn = document.getElementById("btn-copy-code");
+        var old = btn.textContent;
+        btn.textContent = "Copied";
+        setTimeout(function(){ btn.textContent = old; }, 1200);
+      });
     }
-  );
-
-}
-
-
-/* =================================================
-   PC CONNECT
-================================================= */
-
-function connectPC() {
-
-  const code =
-    document
-      .getElementById("codeInput")
-      .value
-      .trim();
-
-
-  const status =
-    document
-      .getElementById("pcStatus");
-
-
-  /* CHECK CODE */
-
-  if (
-    !/^\d{6}$/.test(code)
-  ) {
-
-    status.textContent =
-      "⚠️ Enter exactly 6 digits.";
-
-    return;
-
-  }
-
-
-  status.textContent =
-    "🌐 Finding phone...";
-
-
-  /* DESTROY OLD */
-
-  if (pcPeer) {
-
-    try {
-      pcPeer.destroy();
-    }
-    catch (e) {}
-
-  }
-
-
-  /* CREATE PC PEER */
-
-  pcPeer =
-    new Peer(
-      undefined,
-      peerConfig
-    );
-
-
-  /* PEER READY */
-
-  pcPeer.on(
-    "open",
-    function(id) {
-
-      console.log(
-        "PC PEER:",
-        id
-      );
-
-
-      status.textContent =
-        "🌐 Connecting to phone...";
-
-
-      /* DATA CONNECTION */
-
-      pcDataConnection =
-        pcPeer.connect(
-          code,
-          {
-            reliable: true
-          }
-        );
-
-
-      /* OPEN */
-
-      pcDataConnection.on(
-        "open",
-        function() {
-
-          console.log(
-            "🟢 PC CONNECTED"
-          );
-
-
-          status.textContent =
-            "🟢 Phone found! Waiting for camera...";
-
-        }
-      );
-
-
-      /* RECEIVE OFFER */
-
-      pcDataConnection.on(
-        "data",
-        async function(message) {
-
-          console.log(
-            "PC RECEIVED:",
-            message
-          );
-
-
-          if (
-            message &&
-            message.type === "OFFER"
-          ) {
-
-            status.textContent =
-              "📡 Camera found! Starting video...";
-
-
-            await receiveOffer(
-              message.sdp
-            );
-
-          }
-
-        }
-      );
-
-
-      /* ERROR */
-
-      pcDataConnection.on(
-        "error",
-        function(error) {
-
-          console.error(
-            "PC DATA ERROR:",
-            error
-          );
-
-
-          status.textContent =
-            "❌ Connection error.";
-
-        }
-      );
-
-    }
-  );
-
-
-  /* PEER ERROR */
-
-  pcPeer.on(
-    "error",
-    function(error) {
-
-      console.error(
-        "PC PEER ERROR:",
-        error
-      );
-
-
-      if (
-        error.type ===
-        "peer-unavailable"
-      ) {
-
-        status.textContent =
-          "❌ Phone not found. Check the code.";
-
-      }
-
-      else {
-
-        status.textContent =
-          "❌ " + error.type;
-
-      }
-
-    }
-  );
-
-}
-
-
-/* =================================================
-   RECEIVE OFFER
-================================================= */
-
-async function receiveOffer(
-  offer
-) {
-
-  console.log(
-    "📡 OFFER RECEIVED"
-  );
-
-
-  /* CREATE RTC */
-
-  pcRTC =
-    new RTCPeerConnection({
-
-      iceServers: [
-
-        {
-          urls:
-            "stun:stun.l.google.com:19302"
-        }
-
-      ]
-
-    });
-
-
-  /* RECEIVE VIDEO */
-
-  pcRTC.addTransceiver(
-    "video",
-    {
-      direction: "recvonly"
-    }
-  );
-
-
-  /* VIDEO */
-
-  pcRTC.ontrack =
-    function(event) {
-
-      console.log(
-        "🔥 VIDEO RECEIVED"
-      );
-
-
-      const video =
-        document
-          .getElementById("pcVideo");
-
-
-      if (
-        event.streams &&
-        event.streams[0]
-      ) {
-
-        video.srcObject =
-          event.streams[0];
-
-      }
-
-      else {
-
-        const stream =
-          new MediaStream();
-
-        stream.addTrack(
-          event.track
-        );
-
-        video.srcObject =
-          stream;
-
-      }
-
-
-      video.play()
-        .then(function() {
-
-          document
-            .getElementById("pcStatus")
-            .textContent =
-            "🟢 LIVE! Phone camera connected.";
-
-        })
-        .catch(function(error) {
-
-          console.error(
-            error
-          );
-
-        });
-
-    };
-
-
-  /* RTC STATUS */
-
-  pcRTC.onconnectionstatechange =
-    function() {
-
-      console.log(
-        "PC RTC:",
-        pcRTC.connectionState
-      );
-
-      if (
-        pcRTC.connectionState ===
-        "connected"
-      ) {
-
-        document
-          .getElementById("pcStatus")
-          .textContent =
-          "🟢 LIVE!";
-
-      }
-
-    };
-
-
-  /* SET OFFER */
-
-  await pcRTC.setRemoteDescription(
-    new RTCSessionDescription(offer)
-  );
-
-
-  /* ANSWER */
-
-  const answer =
-    await pcRTC.createAnswer();
-
-
-  await pcRTC.setLocalDescription(
-    answer
-  );
-
-
-  /* SEND ANSWER */
-
-  pcDataConnection.send({
-
-    type: "ANSWER",
-
-    sdp:
-      pcRTC.localDescription
-
   });
 
+  // ============================================================
+  // PC (VIEWER) FLOW
+  // ============================================================
+  var pcCodeInput = document.getElementById("pc-code-input");
+  var btnConnect = document.getElementById("btn-connect");
+  var pcEntryError = document.getElementById("pc-entry-error");
+  var pcVideo = document.getElementById("pc-video");
+  var pcOverlay = document.getElementById("pc-overlay");
+  var pcDot = document.getElementById("pc-dot");
+  var pcStatus = document.getElementById("pc-status");
 
-  console.log(
-    "📡 ANSWER SENT"
-  );
+  pcCodeInput.addEventListener("input", function(){
+    pcCodeInput.value = pcCodeInput.value.replace(/\D/g, "").slice(0,6);
+    btnConnect.disabled = pcCodeInput.value.length !== 6;
+    pcEntryError.textContent = "";
+  });
+  pcCodeInput.addEventListener("keydown", function(e){
+    if (e.key === "Enter" && !btnConnect.disabled) btnConnect.click();
+  });
 
+  btnConnect.addEventListener("click", function(){
+    var code = pcCodeInput.value;
+    if (code.length !== 6) return;
+    connectToPhone(code);
+  });
 
-  document
-    .getElementById("pcStatus")
-    .textContent =
-    "🟡 Connecting video...";
+  function connectToPhone(code){
+    teardownPeer();
+    btnConnect.disabled = true;
+    pcEntryError.textContent = "";
+    pcEntryError.style.color = "var(--text-dim)";
+    pcEntryError.textContent = "Connecting…";
 
-}
+    peer = new Peer(undefined, { debug: 0 });
 
+    peer.on("open", function(){
+      var remoteId = PEER_PREFIX + code;
+      var call = peer.call(remoteId, new MediaStream());
+      activeCall = call;
 
-/* =================================================
-   CLEANUP
-================================================= */
+      connectTimeoutId = setTimeout(function(){
+        pcEntryError.style.color = "var(--danger)";
+        pcEntryError.textContent = "No camera responded to that code. Check it and try again.";
+        btnConnect.disabled = false;
+        teardownPeer();
+      }, 12000);
 
-window.addEventListener(
-  "beforeunload",
-  function() {
+      call.on("stream", function(remoteStream){
+        clearTimeout(connectTimeoutId); connectTimeoutId = null;
+        pcVideo.srcObject = remoteStream;
+        showScreen("pcViewer");
+        setGlobal("live", "streaming");
+        pcDot.className = "dot live";
+        pcStatus.textContent = "Connected — live";
+        btnConnect.disabled = false;
+      });
 
-    if (phoneStream) {
+      call.on("close", function(){
+        pcStatus.textContent = "Phone disconnected.";
+        pcDot.className = "dot idle";
+        setGlobal("idle", "viewer mode");
+        stopDetection();
+      });
+    });
 
-      phoneStream
-        .getTracks()
-        .forEach(function(track) {
-
-          track.stop();
-
-        });
-
-    }
-
-    if (phonePeer) {
-
-      phonePeer.destroy();
-
-    }
-
-    if (pcPeer) {
-
-      pcPeer.destroy();
-
-    }
-
+    peer.on("error", function(err){
+      clearTimeout(connectTimeoutId); connectTimeoutId = null;
+      pcEntryError.style.color = "var(--danger)";
+      if (err && err.type === "peer-unavailable"){
+        pcEntryError.textContent = "No camera found with that code. Make sure the phone screen is still open.";
+      } else {
+        pcEntryError.textContent = "Connection error: " + (err && err.type ? err.type : "unknown");
+      }
+      btnConnect.disabled = false;
+    });
   }
-);
 
+  // ---------- AI detection (COCO-SSD, runs on the viewer) ----------
+  var btnToggleAI = document.getElementById("btn-toggle-ai");
+  var detectStatus = document.getElementById("detect-status");
+  var detectList = document.getElementById("detect-list");
+  var overlayCtx = pcOverlay.getContext("2d");
+
+  btnToggleAI.addEventListener("click", function(){
+    if (detecting){
+      stopDetection();
+    } else {
+      startDetection();
+    }
+  });
+
+  function loadScript(src){
+    return new Promise(function(resolve, reject){
+      var s = document.createElement("script");
+      s.src = src;
+      s.onload = resolve;
+      s.onerror = function(){ reject(new Error("Failed to load " + src)); };
+      document.head.appendChild(s);
+    });
+  }
+
+  function ensureModel(){
+    if (cocoModel) return Promise.resolve(cocoModel);
+    if (window.__cocoLoadPromise) return window.__cocoLoadPromise;
+
+    detectStatus.textContent = "loading model…";
+    window.__cocoLoadPromise = Promise.resolve()
+      .then(function(){
+        if (!window.tf) return loadScript("https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.20.0/dist/tf.min.js");
+      })
+      .then(function(){
+        if (!window.cocoSsd) return loadScript("https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js");
+      })
+      .then(function(){ return cocoSsd.load({ base: "lite_mobilenet_v2" }); })
+      .then(function(model){
+        cocoModel = model;
+        return model;
+      });
+    return window.__cocoLoadPromise;
+  }
+
+  function startDetection(){
+    btnToggleAI.disabled = true;
+    ensureModel().then(function(){
+      btnToggleAI.disabled = false;
+      btnToggleAI.textContent = "Stop AI detection";
+      detecting = true;
+      pcDot.className = "dot ai";
+      setGlobal("ai", "detecting");
+      detectStatus.textContent = "";
+      detectLoop();
+    }).catch(function(err){
+      btnToggleAI.disabled = false;
+      detectStatus.textContent = "model failed to load";
+    });
+  }
+
+  function stopDetection(){
+    detecting = false;
+    if (detectRafId){ cancelAnimationFrame(detectRafId); detectRafId = null; }
+    btnToggleAI.textContent = "Start AI detection";
+    detectStatus.textContent = "";
+    detectList.innerHTML = "";
+    overlayCtx.clearRect(0, 0, pcOverlay.width, pcOverlay.height);
+    if (pcVideo.srcObject){ pcDot.className = "dot live"; setGlobal("live", "streaming"); }
+  }
+
+  var lastDetectTime = 0;
+  function detectLoop(timestamp){
+    if (!detecting) return;
+    detectRafId = requestAnimationFrame(detectLoop);
+
+    // throttle to roughly every 150ms to keep it smooth on modest hardware
+    if (timestamp - lastDetectTime < 150) return;
+    lastDetectTime = timestamp;
+
+    if (pcVideo.readyState < 2 || pcVideo.videoWidth === 0) return;
+
+    syncOverlaySize();
+
+    cocoModel.detect(pcVideo).then(function(predictions){
+      drawPredictions(predictions);
+    }).catch(function(){ /* transient frame errors are safe to ignore */ });
+  }
+
+  function syncOverlaySize(){
+    var w = pcVideo.clientWidth, h = pcVideo.clientHeight;
+    if (pcOverlay.width !== w || pcOverlay.height !== h){
+      pcOverlay.width = w;
+      pcOverlay.height = h;
+    }
+  }
+
+  function drawPredictions(predictions){
+    overlayCtx.clearRect(0, 0, pcOverlay.width, pcOverlay.height);
+    var scaleX = pcOverlay.width / pcVideo.videoWidth;
+    var scaleY = pcOverlay.height / pcVideo.videoHeight;
+
+    var seen = {};
+    predictions.forEach(function(p){
+      var x = p.bbox[0] * scaleX, y = p.bbox[1] * scaleY;
+      var w = p.bbox[2] * scaleX, h = p.bbox[3] * scaleY;
+      var label = p.class + " " + Math.round(p.score * 100) + "%";
+
+      overlayCtx.strokeStyle = "#3ddc97";
+      overlayCtx.lineWidth = 2;
+      overlayCtx.strokeRect(x, y, w, h);
+
+      overlayCtx.font = "12px ui-monospace, monospace";
+      var textW = overlayCtx.measureText(label).width;
+      overlayCtx.fillStyle = "#3ddc97";
+      overlayCtx.fillRect(x - 1, y - 18, textW + 8, 18);
+      overlayCtx.fillStyle = "#0d120f";
+      overlayCtx.fillText(label, x + 3, y - 5);
+
+      seen[p.class] = (seen[p.class] || 0) + 1;
+    });
+
+    detectStatus.textContent = predictions.length + " object" + (predictions.length === 1 ? "" : "s");
+    detectList.innerHTML = Object.keys(seen).map(function(k){
+      return '<span class="detect-chip">' + k + (seen[k] > 1 ? " ×" + seen[k] : "") + "</span>";
+    }).join("");
+  }
+
+  window.addEventListener("resize", syncOverlaySize);
+
+})();
 </script>
-
 </body>
 </html>

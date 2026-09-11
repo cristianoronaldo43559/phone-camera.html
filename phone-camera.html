@@ -1,563 +1,379 @@
-<!DOCTYPE html>
+<!-- 
+
+
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
-<title>Signal — phone as AI camera</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
-<style>
-  :root{
-    --bg:#14171a;
-    --panel:#1b1f23;
-    --panel-2:#20252a;
-    --border:#33393f;
-    --text:#ecedee;
-    --text-dim:#8b9299;
-    --text-faint:#565d63;
-    --live:#ff5a36;
-    --ai:#3ddc97;
-    --ai-dim:#1f5c42;
-    --danger:#ff5a5a;
-    --mono: ui-monospace, "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
-    --sans: "Space Grotesk", system-ui, sans-serif;
-  }
-  *{ box-sizing:border-box; }
-  html,body{ height:100%; }
-  body{
-    margin:0;
-    background:var(--bg);
-    color:var(--text);
-    font-family:var(--sans);
-    display:flex;
-    align-items:flex-start;
-    justify-content:center;
-    min-height:100%;
-    -webkit-tap-highlight-color:transparent;
-  }
-  #app{ width:100%; max-width:460px; min-height:100vh; display:flex; flex-direction:column; }
-  .topbar{ display:flex; align-items:center; gap:10px; padding:18px 20px 10px 20px; }
-  .dot{ width:9px; height:9px; border-radius:50%; background:var(--text-faint); flex-shrink:0; transition:background .2s, box-shadow .2s; }
-  .dot.live{ background:var(--live); box-shadow:0 0 10px 1px rgba(255,90,54,.55); animation:pulse 1.6s ease-in-out infinite; }
-  .dot.ai{ background:var(--ai); box-shadow:0 0 10px 1px rgba(61,220,151,.5); }
-  .dot.idle{ background:var(--text-faint); box-shadow:none; animation:none; }
-  @keyframes pulse{ 0%,100%{ opacity:1;} 50%{ opacity:.45;} }
-  .brand{ font-weight:600; letter-spacing:.02em; font-size:15px; }
-  .topbar .status-text{ margin-left:auto; font-size:12.5px; color:var(--text-dim); font-family:var(--mono); }
-  main{ flex:1; display:flex; flex-direction:column; padding:6px 20px 28px 20px; }
-  .hidden{ display:none !important; }
-  .frame{ position:relative; flex:1; display:flex; flex-direction:column; padding:26px 20px; margin-top:6px; }
-  .frame::before, .frame::after, .frame .fc-tr, .frame .fc-br{ content:""; position:absolute; width:22px; height:22px; border:2px solid var(--border); }
-  .frame::before{ top:0; left:0; border-right:none; border-bottom:none; }
-  .frame::after{ bottom:0; left:0; border-right:none; border-top:none; }
-  .frame .fc-tr{ top:0; right:0; border-left:none; border-bottom:none; }
-  .frame .fc-br{ bottom:0; right:0; border-left:none; border-top:none; }
-  h1{ font-size:26px; line-height:1.2; font-weight:600; margin:10px 0 10px 0; }
-  h2{ font-size:19px; font-weight:600; margin:6px 0 18px 0; text-align:center; }
-  p.sub{ color:var(--text-dim); font-size:14.5px; line-height:1.55; margin:0 0 30px 0; }
-  button{ font-family:var(--sans); cursor:pointer; }
-  .btn{ display:flex; align-items:center; justify-content:center; width:100%; padding:15px 18px; border-radius:2px; border:1px solid var(--border); background:var(--panel-2); color:var(--text); font-size:15px; font-weight:500; transition:border-color .15s, background .15s; }
-  .btn:hover{ border-color:#4a5158; }
-  .btn:active{ transform:translateY(1px); }
-  .btn-primary{ background:var(--text); color:#14171a; border-color:var(--text); font-weight:600; }
-  .btn-primary:hover{ background:#d7d9db; }
-  .btn-primary:disabled{ background:var(--panel-2); color:var(--text-faint); border-color:var(--border); cursor:not-allowed; }
-  .btn-live{ border-color:var(--live); color:var(--live); }
-  .btn-live:hover{ background:rgba(255,90,54,.08); }
-  .btn-ai{ border-color:var(--ai); color:var(--ai); }
-  .btn-ai:hover{ background:rgba(61,220,151,.08); }
-  .link{ background:none; border:none; color:var(--text-dim); font-size:13.5px; padding:14px 4px 0 4px; text-decoration:underline; text-underline-offset:3px; width:auto; align-self:center; }
-  .link:hover{ color:var(--text); }
-  .role-buttons{ display:flex; flex-direction:column; gap:12px; margin-top:auto; }
-  .role-buttons .btn{ text-align:left; justify-content:flex-start; padding:18px; }
-  .role-buttons .btn .role-kicker{ display:block; font-family:var(--mono); font-size:11px; color:var(--text-faint); margin-bottom:5px; letter-spacing:.03em; }
-  .role-buttons .btn:first-child .role-kicker{ color:var(--live); }
-  .role-buttons .btn:last-child .role-kicker{ color:var(--ai); }
-  #phone-preview{ width:100%; aspect-ratio: 3/4; background:#000; border:1px solid var(--border); object-fit:cover; display:block; }
-  .code-block{ margin-top:22px; text-align:center; }
-  .code-label{ font-size:12px; color:var(--text-dim); margin-bottom:8px; }
-  .code-value{ font-family:var(--mono); font-size:40px; font-weight:600; letter-spacing:.14em; color:var(--text); }
-  .code-value.pending{ color:var(--text-faint); }
-  .code-row{ display:flex; gap:10px; margin-top:16px; }
-  .status-row{ display:flex; align-items:center; gap:9px; font-size:13.5px; color:var(--text-dim); margin-bottom:16px; min-height:18px; }
-  .code-input{ width:100%; background:var(--panel); border:1px solid var(--border); color:var(--text); font-family:var(--mono); font-size:32px; letter-spacing:.4em; text-align:center; padding:16px 0 16px 12px; border-radius:2px; outline:none; }
-  .code-input:focus{ border-color:var(--text-dim); }
-  .field-hint{ font-size:12.5px; color:var(--text-faint); text-align:center; margin:10px 0 26px 0; }
-  .field-error{ font-size:13px; color:var(--danger); text-align:center; min-height:18px; margin-top:14px; }
-  .video-wrap{ position:relative; width:100%; background:#000; border:1px solid var(--border); overflow:hidden; }
-  #pc-video{ width:100%; display:block; }
-  #pc-overlay{ position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; }
-  .controls-row{ display:flex; align-items:center; gap:14px; margin-top:16px; }
-  .controls-row .btn{ width:auto; flex:1; }
-  #detect-status{ font-family:var(--mono); font-size:12px; color:var(--text-dim); }
-  .detect-list{ margin-top:16px; display:flex; flex-wrap:wrap; gap:8px; }
-  .detect-chip{ font-family:var(--mono); font-size:12px; padding:5px 9px; border:1px solid var(--ai-dim); color:var(--ai); border-radius:2px; background:rgba(61,220,151,.06); }
-  .footnote{ text-align:center; color:var(--text-faint); font-size:11.5px; padding:16px 26px 4px 26px; line-height:1.5; }
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Emotion Detector</title>
+  <style>
+    body {
+      margin:0;
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      height:100vh;
+      background:#0d1117;
+      color:white;
+      font-family:Arial, sans-serif;
+    }
+    .stage {
+      position:relative;
+    }
+    video, canvas {
+      border-radius:10px;
+    }
+    video {
+      transform: scaleX(-1); /* mirror video */
+    }
+    canvas {
+      position:absolute;
+      left:0; top:0;
+      pointer-events:none;
+    }
+    #status {
+      margin-top:10px;
+      text-align:center;
+      font-weight:bold;
+      color:#00e676;
+    }
+  </style>
 </head>
 <body>
-<div id="app">
-
-  <div class="topbar">
-    <span class="dot idle" id="global-dot"></span>
-    <span class="brand">SIGNAL</span>
-    <span class="status-text" id="global-status">idle</span>
+  <div class="stage">
+    <video id="video" autoplay muted playsinline width="640" height="480"></video>
+    <canvas id="overlay" width="640" height="480"></canvas>
+    <div id="status">Loading models...</div>
   </div>
 
-  <main>
+  <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.min.js"></script>
+  <script>
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('overlay');
+    const ctx = canvas.getContext('2d');
+    const statusEl = document.getElementById('status');
 
-    <section class="frame" id="screen-role">
-      <span class="fc-tr"></span><span class="fc-br"></span>
-      <h1>Turn a phone into a wireless camera for this computer.</h1>
-      <p class="sub">One device streams live video, the other watches it, linked by a one-time 6-digit code. Works best when both devices share one network (Wi-Fi, hotspot, or USB tethering).</p>
-      <div class="role-buttons">
-        <button class="btn btn-live" id="btn-role-phone">
-          <span>
-            <span class="role-kicker">● THIS DEVICE IS THE CAMERA</span>
-            Use my phone to stream video
-          </span>
-        </button>
-        <button class="btn btn-ai" id="btn-role-pc">
-          <span>
-            <span class="role-kicker">◆ THIS DEVICE IS THE VIEWER</span>
-            Watch a stream + run AI detection
-          </span>
-        </button>
-      </div>
-    </section>
+    async function start() {
+      // Load all required models from CDN
+      await faceapi.nets.tinyFaceDetector.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/');
+      await faceapi.nets.faceLandmark68TinyNet.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/');
+      await faceapi.nets.faceExpressionNet.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/');
+      statusEl.textContent = "Models loaded! Starting camera...";
 
-    <section class="frame hidden" id="screen-phone">
-      <span class="fc-tr"></span><span class="fc-br"></span>
-      <div class="status-row">
-        <span class="dot idle" id="phone-dot"></span>
-        <span id="phone-status">Starting camera…</span>
-      </div>
-      <video id="phone-preview" autoplay playsinline muted></video>
-      <div class="code-block">
-        <div class="code-label">Enter this code on the computer</div>
-        <div class="code-value pending" id="phone-code">------</div>
-      </div>
-      <div class="code-row">
-        <button class="btn" id="btn-copy-code">Copy code</button>
-        <button class="btn" id="btn-new-code">New code</button>
-      </div>
-      <button class="link" id="btn-back-phone">Back</button>
-    </section>
+      // Start camera
+      const stream = await navigator.mediaDevices.getUserMedia({ video: {} });
+      video.srcObject = stream;
 
-    <section class="frame hidden" id="screen-pc-entry">
-      <span class="fc-tr"></span><span class="fc-br"></span>
-      <h2>Enter the code shown on the phone</h2>
-      <input class="code-input" id="pc-code-input" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="000000" autocomplete="off">
-      <div class="field-hint">6 digits, no spaces</div>
-      <button class="btn btn-primary" id="btn-connect" disabled>Connect</button>
-      <div class="field-error" id="pc-entry-error"></div>
-      <button class="link" id="btn-back-pc">Back</button>
-    </section>
+      video.onloadedmetadata = () => {
+        statusEl.textContent = "Running detection...";
+        detectLoop();
+      };
+    }
 
-    <section class="frame hidden" id="screen-pc-viewer">
-      <span class="fc-tr"></span><span class="fc-br"></span>
-      <div class="status-row">
-        <span class="dot live" id="pc-dot"></span>
-        <span id="pc-status">Connected</span>
-      </div>
-      <div class="video-wrap">
-        <video id="pc-video" autoplay playsinline></video>
-        <canvas id="pc-overlay"></canvas>
-      </div>
-      <div class="controls-row">
-        <button class="btn btn-ai" id="btn-toggle-ai">Start AI detection</button>
-        <span id="detect-status"></span>
-      </div>
-      <div class="detect-list" id="detect-list"></div>
-      <button class="link" id="btn-disconnect">Disconnect</button>
-    </section>
+    async function detectLoop() {
+      const options = new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.5 });
 
-  </main>
+      const detections = await faceapi
+        .detectAllFaces(video, options)
+        .withFaceLandmarks(true)
+        .withFaceExpressions();
 
-  <div class="footnote">Uses a free public signaling service only to help the two devices find each other — your video never passes through it. For best results, connect the phone and computer to the same network (Wi-Fi, mobile hotspot, or USB tethering).</div>
-</div>
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-<script>
-(function(){
-  "use strict";
+      if (detections.length > 0) {
+        detections.forEach(d => {
+          const box = d.detection.box;
+          const landmarks = d.landmarks;
 
-  // STUN only — no third-party TURN relay. Works when both devices share
-  // one network (same Wi-Fi, phone hotspot, or USB tethering).
-  var ICE_CONFIG = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
+          // Draw green face box
+          ctx.strokeStyle = "#00ff00";
+          ctx.lineWidth = 2;
+          ctx.strokeRect(canvas.width - box.x - box.width, box.y, box.width, box.height);
 
-  var peer = null;
-  var phoneStream = null;
-  var activeCall = null;
-  var connectTimeoutId = null;
+          // Draw landmarks (dot-to-dot mirrored)
+          ctx.fillStyle = "#ff00ff";
+          landmarks.positions.forEach(p => {
+            ctx.beginPath();
+            ctx.arc(canvas.width - p.x, p.y, 2, 0, 2 * Math.PI);
+            ctx.fill();
+          });
 
-  var cocoModel = null;
-  var detecting = false;
-  var detectRafId = null;
+          // Emotion
+          const expr = d.expressions;
+          let best = "neutral", bestVal = 0;
+          for (let k in expr) {
+            if (expr[k] > bestVal) { bestVal = expr[k]; best = k; }
+          }
+          const emotion = best.toUpperCase();
 
-  var PEER_PREFIX = "signal-aiwc-";
+          // Draw label background
+          ctx.font = "24px Arial";
+          const textW = ctx.measureText(emotion).width;
+          const centerX = canvas.width - (box.x + box.width / 2);
+          const textX = centerX - textW / 2;
+          const textY = box.y - 10;
 
-  var screens = {
-    role: document.getElementById("screen-role"),
-    phone: document.getElementById("screen-phone"),
-    pcEntry: document.getElementById("screen-pc-entry"),
-    pcViewer: document.getElementById("screen-pc-viewer")
-  };
-  var globalDot = document.getElementById("global-dot");
-  var globalStatus = document.getElementById("global-status");
+          ctx.fillStyle = "#00ff00";
+          ctx.fillRect(textX - 5, textY - 28, textW + 10, 30);
 
-  function showScreen(name){
-    Object.keys(screens).forEach(function(k){
-      screens[k].classList.toggle("hidden", k !== name);
-    });
-  }
+          // Draw emotion text
+          ctx.fillStyle = "#000";
+          ctx.fillText(emotion, textX, textY - 5);
+        });
+      }
 
-  function setGlobal(dotClass, text){
-    globalDot.className = "dot " + dotClass;
-    globalStatus.textContent = text;
-  }
+      requestAnimationFrame(detectLoop);
+    }
 
-  function teardownPeer(){
-    if (connectTimeoutId){ clearTimeout(connectTimeoutId); connectTimeoutId = null; }
-    stopDetection();
-    if (activeCall){ try{ activeCall.close(); }catch(e){} activeCall = null; }
-    if (phoneStream){ phoneStream.getTracks().forEach(function(t){ t.stop(); }); phoneStream = null; }
-    if (peer){ try{ peer.destroy(); }catch(e){} peer = null; }
-  }
+    start();
+  </script>
+</body>
+</html>
+ -->
 
-  window.addEventListener("beforeunload", teardownPeer);
 
-  document.getElementById("btn-role-phone").addEventListener("click", function(){
-    showScreen("phone");
-    setGlobal("idle", "camera mode");
-    startPhoneFlow();
-  });
-  document.getElementById("btn-role-pc").addEventListener("click", function(){
-    showScreen("pcEntry");
-    setGlobal("idle", "viewer mode");
-    document.getElementById("pc-code-input").focus();
-  });
-  document.getElementById("btn-back-phone").addEventListener("click", function(){
-    teardownPeer();
-    showScreen("role");
-    setGlobal("idle", "idle");
-  });
-  document.getElementById("btn-back-pc").addEventListener("click", function(){
-    teardownPeer();
-    showScreen("role");
-    setGlobal("idle", "idle");
-  });
-  document.getElementById("btn-disconnect").addEventListener("click", function(){
-    teardownPeer();
-    showScreen("pcEntry");
-    setGlobal("idle", "viewer mode");
-    document.getElementById("pc-entry-error").textContent = "";
-  });
 
-  // ============================================================
-  // PHONE (CAMERA) FLOW
-  // ============================================================
-  var phoneDot = document.getElementById("phone-dot");
-  var phoneStatus = document.getElementById("phone-status");
-  var phoneCodeEl = document.getElementById("phone-code");
-  var phonePreview = document.getElementById("phone-preview");
+ <!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Emotion Detector — box + landmarks + label</title>
+  <style>
+    :root { --bg:#07101a; --accent:#00c853; --muted:#9aa4b2; }
+    body {
+      margin:0;
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:linear-gradient(180deg,#051019,#07121b);
+      color:#e6eef6;
+      font-family: Inter, Arial, sans-serif;
+    }
+    .stage {
+      position:relative;
+      width:760px;
+      padding:14px;
+      background:#0b0f13;
+      border-radius:10px;
+      box-shadow:0 14px 40px rgba(0,0,0,0.6);
+      display:block;
+    }
+    video {
+      width:720px;
+      height:540px;
+      border-radius:8px;
+      background:#000;
+      transform: scaleX(-1); /* mirror video for natural selfie-like view */
+      display:block;
+    }
+    canvas {
+      position:absolute;
+      left:14px; top:14px; /* align to video inside stage */
+      width:720px; height:540px; /* CSS size */
+      pointer-events:none;
+      /* DO NOT mirror canvas via CSS — drawing code handles mirroring for overlays */
+    }
+    #status {
+      margin-top:10px;
+      text-align:center;
+      color:var(--accent);
+      font-weight:700;
+    }
+    .hint { font-size:12px; color:var(--muted); text-align:center; margin-top:6px; }
+  </style>
+</head>
+<body>
+  <div class="stage">
+    <video id="video" autoplay muted playsinline></video>
+    <canvas id="overlay" width="720" height="540"></canvas>
+    <div id="status">Loading models...</div>
+    <div class="hint">Run from <strong>localhost</strong>. Allow camera. If models fail, open console for errors.</div>
+  </div>
 
-  function randomCode(){
-    return String(Math.floor(100000 + Math.random() * 900000));
-  }
+  <!-- vladmandic fork of face-api (includes TFJS) -->
+  <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.min.js"></script>
+  <script>
+    (async () => {
+      const VIDEO_W = 720, VIDEO_H = 540;
+      const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
+      const video = document.getElementById('video');
+      const canvas = document.getElementById('overlay');
+      const ctx = canvas.getContext('2d');
+      const statusEl = document.getElementById('status');
 
-  function startPhoneFlow(){
-    teardownPeer();
-    phoneCodeEl.textContent = "------";
-    phoneCodeEl.classList.add("pending");
-    phoneDot.className = "dot idle";
-    phoneStatus.textContent = "Requesting camera access…";
-
-    var constraints = {
-      video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } },
-      audio: false
-    };
-
-    navigator.mediaDevices.getUserMedia(constraints).then(function(stream){
-      phoneStream = stream;
-      phonePreview.srcObject = stream;
-      phoneStatus.textContent = "Camera ready. Opening connection…";
-      openPhonePeer();
-    }).catch(function(err){
-      phoneStatus.textContent = "Camera access failed: " + (err && err.message ? err.message : err);
-      phoneDot.className = "dot idle";
-    });
-  }
-
-  function openPhonePeer(attempt){
-    attempt = attempt || 1;
-    var code = randomCode();
-    var id = PEER_PREFIX + code;
-
-    if (peer){ try{ peer.destroy(); }catch(e){} }
-    peer = new Peer(id, { debug: 0, config: ICE_CONFIG });
-
-    peer.on("open", function(){
-      phoneCodeEl.textContent = code.slice(0,3) + " " + code.slice(3);
-      phoneCodeEl.classList.remove("pending");
-      phoneStatus.textContent = "Waiting for the computer to connect…";
-      phoneDot.className = "dot idle";
-    });
-
-    peer.on("call", function(call){
-      activeCall = call;
-      call.answer(phoneStream);
-      phoneStatus.textContent = "Connected — streaming live";
-      phoneDot.className = "dot live";
-      setGlobal("live", "streaming");
-
-      call.on("close", function(){
-        phoneStatus.textContent = "Viewer disconnected. Waiting again…";
-        phoneDot.className = "dot idle";
-        setGlobal("idle", "camera mode");
-      });
-    });
-
-    peer.on("error", function(err){
-      if (err && err.type === "unavailable-id" && attempt < 5){
-        openPhonePeer(attempt + 1);
+      // sanity check
+      if (!window.faceapi) {
+        statusEl.textContent = 'faceapi not loaded!';
+        console.error('faceapi library missing.');
         return;
       }
-      phoneStatus.textContent = "Connection error: " + (err && err.type ? err.type : "unknown") + ". Tap \u201cNew code\u201d to retry.";
-      phoneDot.className = "dot idle";
-    });
 
-    peer.on("disconnected", function(){
-      phoneStatus.textContent = "Lost connection to the signaling service. Tap \u201cNew code\u201d to retry.";
-      phoneDot.className = "dot idle";
-    });
-  }
-
-  document.getElementById("btn-new-code").addEventListener("click", function(){
-    if (!phoneStream) return;
-    phoneStatus.textContent = "Generating a new code…";
-    openPhonePeer();
-  });
-
-  document.getElementById("btn-copy-code").addEventListener("click", function(){
-    var raw = phoneCodeEl.textContent.replace(/\s/g, "");
-    if (raw === "------") return;
-    if (navigator.clipboard){
-      navigator.clipboard.writeText(raw).then(function(){
-        var btn = document.getElementById("btn-copy-code");
-        var old = btn.textContent;
-        btn.textContent = "Copied";
-        setTimeout(function(){ btn.textContent = old; }, 1200);
-      });
-    }
-  });
-
-  // ============================================================
-  // PC (VIEWER) FLOW
-  // ============================================================
-  var pcCodeInput = document.getElementById("pc-code-input");
-  var btnConnect = document.getElementById("btn-connect");
-  var pcEntryError = document.getElementById("pc-entry-error");
-  var pcVideo = document.getElementById("pc-video");
-  var pcOverlay = document.getElementById("pc-overlay");
-  var pcDot = document.getElementById("pc-dot");
-  var pcStatus = document.getElementById("pc-status");
-
-  pcCodeInput.addEventListener("input", function(){
-    pcCodeInput.value = pcCodeInput.value.replace(/\D/g, "").slice(0,6);
-    btnConnect.disabled = pcCodeInput.value.length !== 6;
-    pcEntryError.textContent = "";
-  });
-  pcCodeInput.addEventListener("keydown", function(e){
-    if (e.key === "Enter" && !btnConnect.disabled) btnConnect.click();
-  });
-
-  btnConnect.addEventListener("click", function(){
-    var code = pcCodeInput.value;
-    if (code.length !== 6) return;
-    connectToPhone(code);
-  });
-
-  function connectToPhone(code){
-    teardownPeer();
-    btnConnect.disabled = true;
-    pcEntryError.style.color = "var(--text-dim)";
-    pcEntryError.textContent = "Connecting…";
-
-    peer = new Peer(undefined, { debug: 0, config: ICE_CONFIG });
-
-    peer.on("open", function(){
-      var remoteId = PEER_PREFIX + code;
-      var call = peer.call(remoteId, new MediaStream());
-      activeCall = call;
-
-      connectTimeoutId = setTimeout(function(){
-        pcEntryError.style.color = "var(--danger)";
-        pcEntryError.textContent = "No camera responded to that code. Make sure both devices share the same network and try again.";
-        btnConnect.disabled = false;
-        teardownPeer();
-      }, 15000);
-
-      call.on("stream", function(remoteStream){
-        clearTimeout(connectTimeoutId); connectTimeoutId = null;
-        pcVideo.srcObject = remoteStream;
-        showScreen("pcViewer");
-        setGlobal("live", "streaming");
-        pcDot.className = "dot live";
-        pcStatus.textContent = "Connected — live";
-        btnConnect.disabled = false;
-      });
-
-      call.on("close", function(){
-        pcStatus.textContent = "Phone disconnected.";
-        pcDot.className = "dot idle";
-        setGlobal("idle", "viewer mode");
-        stopDetection();
-      });
-    });
-
-    peer.on("error", function(err){
-      clearTimeout(connectTimeoutId); connectTimeoutId = null;
-      pcEntryError.style.color = "var(--danger)";
-      if (err && err.type === "peer-unavailable"){
-        pcEntryError.textContent = "No camera found with that code. Make sure the phone screen is still open.";
-      } else {
-        pcEntryError.textContent = "Connection error: " + (err && err.type ? err.type : "unknown");
+      async function loadModels() {
+        try {
+          statusEl.textContent = 'Loading models (few seconds)…';
+          console.log('Loading models from', MODEL_URL);
+          await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+          await faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODEL_URL);
+          await faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL);
+          console.log('Models loaded');
+          statusEl.textContent = 'Models loaded — starting camera...';
+        } catch (err) {
+          console.error('Model load error:', err);
+          statusEl.textContent = 'Model load error — check console';
+          throw err;
+        }
       }
-      btnConnect.disabled = false;
-    });
-  }
 
-  // ---------- AI detection (COCO-SSD, runs on the viewer) ----------
-  var btnToggleAI = document.getElementById("btn-toggle-ai");
-  var detectStatus = document.getElementById("detect-status");
-  var detectList = document.getElementById("detect-list");
-  var overlayCtx = pcOverlay.getContext("2d");
+      async function startCamera() {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ video: { width: VIDEO_W, height: VIDEO_H }, audio: false });
+          video.srcObject = stream;
+          await new Promise(resolve => video.onloadedmetadata = resolve);
+          video.play();
+          statusEl.textContent = 'Camera started — running detection...';
+        } catch (err) {
+          console.error('Camera error:', err);
+          statusEl.textContent = 'Camera error — allow camera and run on localhost';
+          throw err;
+        }
+      }
 
-  btnToggleAI.addEventListener("click", function(){
-    if (detecting){
-      stopDetection();
-    } else {
-      startDetection();
-    }
-  });
+      // helper -> dominant expression
+      function getDominantExpression(expressions) {
+        let bestLabel = 'neutral', bestVal = 0;
+        for (const k of Object.keys(expressions || {})) {
+          if (expressions[k] > bestVal) { bestVal = expressions[k]; bestLabel = k; }
+        }
+        return { label: bestLabel, score: bestVal };
+      }
 
-  function loadScript(src){
-    return new Promise(function(resolve, reject){
-      var s = document.createElement("script");
-      s.src = src;
-      s.onload = resolve;
-      s.onerror = function(){ reject(new Error("Failed to load " + src)); };
-      document.head.appendChild(s);
-    });
-  }
+      // rounded rect helper
+      function roundRect(ctx, x, y, w, h, r) {
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.arcTo(x + w, y, x + w, y + h, r);
+        ctx.arcTo(x + w, y + h, x, y + h, r);
+        ctx.arcTo(x, y + h, x, y, r);
+        ctx.arcTo(x, y, x + w, y, r);
+        ctx.closePath();
+      }
 
-  function ensureModel(){
-    if (cocoModel) return Promise.resolve(cocoModel);
-    if (window.__cocoLoadPromise) return window.__cocoLoadPromise;
+      // main drawing/detection loop
+      async function runDetection() {
+        // detection options (tune inputSize for speed/accuracy)
+        const options = new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.45 });
 
-    detectStatus.textContent = "loading model…";
-    window.__cocoLoadPromise = Promise.resolve()
-      .then(function(){
-        if (!window.tf) return loadScript("https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.20.0/dist/tf.min.js");
-      })
-      .then(function(){
-        if (!window.cocoSsd) return loadScript("https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js");
-      })
-      .then(function(){ return cocoSsd.load({ base: "lite_mobilenet_v2" }); })
-      .then(function(model){
-        cocoModel = model;
-        return model;
-      });
-    return window.__cocoLoadPromise;
-  }
+        // keep a continuous loop with requestAnimationFrame
+        async function loop() {
+          if (video.paused || video.ended) {
+            requestAnimationFrame(loop);
+            return;
+          }
 
-  function startDetection(){
-    btnToggleAI.disabled = true;
-    ensureModel().then(function(){
-      btnToggleAI.disabled = false;
-      btnToggleAI.textContent = "Stop AI detection";
-      detecting = true;
-      pcDot.className = "dot ai";
-      setGlobal("ai", "detecting");
-      detectStatus.textContent = "";
-      detectLoop();
-    }).catch(function(err){
-      btnToggleAI.disabled = false;
-      detectStatus.textContent = "model failed to load";
-    });
-  }
+          // ensure canvas matches actual video resolution (pixel-perfect)
+          if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+          }
 
-  function stopDetection(){
-    detecting = false;
-    if (detectRafId){ cancelAnimationFrame(detectRafId); detectRafId = null; }
-    btnToggleAI.textContent = "Start AI detection";
-    detectStatus.textContent = "";
-    detectList.innerHTML = "";
-    overlayCtx.clearRect(0, 0, pcOverlay.width, pcOverlay.height);
-    if (pcVideo.srcObject){ pcDot.className = "dot live"; setGlobal("live", "streaming"); }
-  }
+          let detections = [];
+          try {
+            detections = await faceapi.detectAllFaces(video, options).withFaceLandmarks(true).withFaceExpressions();
+          } catch (err) {
+            console.error('Detection error:', err);
+          }
 
-  var lastDetectTime = 0;
-  function detectLoop(timestamp){
-    if (!detecting) return;
-    detectRafId = requestAnimationFrame(detectLoop);
+          // clear overlay
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    if (timestamp - lastDetectTime < 150) return;
-    lastDetectTime = timestamp;
+          if (detections && detections.length > 0) {
+            statusEl.textContent = `Face(s) detected: ${detections.length}`;
+            // draw each detection
+            for (const det of detections) {
+              const box = det.detection.box; // non-mirrored coordinates
+              const landmarks = det.landmarks;
+              const expr = getDominantExpression(det.expressions);
+              const emotionText = expr.label.toUpperCase();
 
-    if (pcVideo.readyState < 2 || pcVideo.videoWidth === 0) return;
+              // --- 1) Draw mirrored box & landmarks so they visually align with mirrored video ---
+              ctx.save();
+              // flip horizontally for drawing mirroring effect: (scaleX = -1)
+              ctx.setTransform(-1, 0, 0, 1, canvas.width, 0);
 
-    syncOverlaySize();
+              // green bounding box
+              ctx.lineWidth = 2;
+              ctx.strokeStyle = '#00ff00';
+              ctx.strokeRect(box.x, box.y, box.width, box.height);
 
-    cocoModel.detect(pcVideo).then(function(predictions){
-      drawPredictions(predictions);
-    }).catch(function(){ });
-  }
+              // landmarks (dot-to-dot)
+              ctx.fillStyle = '#ff66d9';
+              const pts = landmarks.positions;
+              for (let p of pts) {
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 2.5, 0, Math.PI * 2);
+                ctx.fill();
+              }
 
-  function syncOverlaySize(){
-    var w = pcVideo.clientWidth, h = pcVideo.clientHeight;
-    if (pcOverlay.width !== w || pcOverlay.height !== h){
-      pcOverlay.width = w;
-      pcOverlay.height = h;
-    }
-  }
+              ctx.restore();
 
-  function drawPredictions(predictions){
-    overlayCtx.clearRect(0, 0, pcOverlay.width, pcOverlay.height);
-    var scaleX = pcOverlay.width / pcVideo.videoWidth;
-    var scaleY = pcOverlay.height / pcVideo.videoHeight;
+              // --- 2) Draw large readable label (NOT mirrored) centered above the face ---
+              // compute visual center on-screen (accounting for video mirroring)
+              const visualCenterX = canvas.width - (box.x + box.width / 2);
+              const labelFontSize = Math.max(18, Math.round(canvas.width * 0.035)); // scale with canvas
+              ctx.font = `${labelFontSize}px Arial`;
+              ctx.textBaseline = 'alphabetic';
+              const metrics = ctx.measureText(emotionText);
+              const textW = metrics.width;
+              const textH = Math.round(labelFontSize * 1.1);
 
-    var seen = {};
-    predictions.forEach(function(p){
-      var x = p.bbox[0] * scaleX, y = p.bbox[1] * scaleY;
-      var w = p.bbox[2] * scaleX, h = p.bbox[3] * scaleY;
-      var label = p.class + " " + Math.round(p.score * 100) + "%";
+              // label coordinates (clamp to top)
+              const labelX = Math.max(6, Math.round(visualCenterX - textW / 2));
+              const labelY = Math.max(textH + 8, Math.round(box.y - 12));
 
-      overlayCtx.strokeStyle = "#3ddc97";
-      overlayCtx.lineWidth = 2;
-      overlayCtx.strokeRect(x, y, w, h);
+              // draw rounded background
+              const padX = 10, padY = 6;
+              const bgX = labelX - padX;
+              const bgY = labelY - textH - padY;
+              const bgW = textW + padX * 2;
+              const bgH = textH + padY * 2;
+              ctx.fillStyle = '#00c853';
+              roundRect(ctx, bgX, bgY, bgW, bgH, 6);
+              ctx.fill();
 
-      overlayCtx.font = "12px ui-monospace, monospace";
-      var textW = overlayCtx.measureText(label).width;
-      overlayCtx.fillStyle = "#3ddc97";
-      overlayCtx.fillRect(x - 1, y - 18, textW + 8, 18);
-      overlayCtx.fillStyle = "#0d120f";
-      overlayCtx.fillText(label, x + 3, y - 5);
+              // text on top (dark for contrast)
+              ctx.fillStyle = '#001a00';
+              ctx.fillText(emotionText, labelX, labelY - 6);
 
-      seen[p.class] = (seen[p.class] || 0) + 1;
-    });
+              // optional: small confidence %
+              // ctx.fillStyle = 'rgba(255,255,255,0.85)';
+              // ctx.font = '12px Arial';
+              // ctx.fillText((expr.score*100).toFixed(0)+'%', labelX + textW + 8, labelY - 6);
+            }
+          } else {
+            statusEl.textContent = 'No face detected — position your face in front of the camera';
+          }
 
-    detectStatus.textContent = predictions.length + " object" + (predictions.length === 1 ? "" : "s");
-    detectList.innerHTML = Object.keys(seen).map(function(k){
-      return '<span class="detect-chip">' + k + (seen[k] > 1 ? " ×" + seen[k] : "") + "</span>";
-    }).join("");
-  }
+          requestAnimationFrame(loop);
+        }
 
-  window.addEventListener("resize", syncOverlaySize);
+        requestAnimationFrame(loop);
+      }
 
-})();
-</script>
+      // run everything
+      try {
+        await loadModels();
+        await startCamera();
+        runDetection();
+      } catch (err) {
+        console.error('Startup failed:', err);
+      }
+
+      // helpful console note
+      console.log('Ready: models loaded and camera started. If detection fails, check console logs.');
+    })();
+  </script>
 </body>
 </html>
